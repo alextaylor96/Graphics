@@ -1,7 +1,7 @@
 #include "Renderer.h"
 
 Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
-	camera = new Camera(-8.0f, 40.0f, Vector3(-200.0f, 50.0f, 250.0f));
+	camera = new Camera(-8.0f, 40.0f, Vector3(350.0f, 200.0f, 450.0f));
 	light = new Light(Vector3(-450.f, 200.0f, 280.f), Vector4(1, 1, 1, 1), 5500.0f);
 
 	hellData = new MD5FileData(MESHDIR"hellKnight.md5mesh");
