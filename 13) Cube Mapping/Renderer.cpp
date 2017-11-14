@@ -68,3 +68,61 @@ void Renderer::UpdateScene(float msec) {
 	viewMatrix = camera->BuildViewMatrix();
 	waterRotate += msec / 1000.0f;
 }
+
+void Renderer::RenderScene() {
+	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+	DrawSkybox();
+	DrawHeightmap();
+	DrawWater();
+	SwapBuffers();
+}
+
+void Renderer::DrawSkybox() {
+	glDepthMask(GL_FALSE);
+	SetCurrentShader(skyboxShader);
+	UpdateShaderMatrices();
+	quad->Draw();
+	glUseProgram(0);
+	glDepthMask(GL_TRUE);
+}
+
+void Renderer::DrawHeightmap() {
+	SetCurrentShader(lightShader);
+	SetShaderLight(*light);
+	glUniform3fv(glGetUniformLocation(currentShader->GetProgram(), "cameraPos"), 1, (float*)&camera->GetPosition());
+	glUniform1i(glGetUniformLocation(currentShader->GetProgram(), "diffuseTex"), 0);
+	glUniform1i(glGetUniformLocation(currentShader->GetProgram(), "bumpTex"), 1);
+
+	modelMatrix.ToIdentity();
+	textureMatrix.ToIdentity();
+
+	UpdateShaderMatrices();
+	heightMap->Draw();
+
+	glUseProgram(0);
+}
+
+void Renderer::DrawWater() {
+	SetCurrentShader(reflectShader);
+	SetShaderLight(*light);
+	glUniform3fv(glGetUniformLocation(currentShader->GetProgram(), "cameraPos"), 1, (float*)&camera->GetPosition());
+	glUniform1i(glGetUniformLocation(currentShader->GetProgram(), "diffuseTex"), 0);
+	glUniform1i(glGetUniformLocation(currentShader->GetProgram(), "cubeTex"), 2);
+	glActiveTexture(GL_TEXTURE2);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, cubeMap);
+	float heightX = (RAW_WIDTH*HEIGHTMAP_X / 2.0f);
+	float heightY = 256 * HEIGHTMAP_Y / 3.0f;
+	float heightZ = (RAW_HEIGHT * HEIGHTMAP_Z / 2.0f);
+
+	modelMatrix = Matrix4::Translation(Vector3(heightX, heightY, heightZ)) *
+		Matrix4::Scale(Vector3(heightX, 1, heightZ)) * Matrix4::Rotation(90, Vector3(1.0f, 0.0f, 0.0f));
+
+	textureMatrix =  Matrix4::Scale(Vector3(10.0f, 10.0f, 10.0f)) * Matrix4::Rotation(waterRotate, Vector3(0.0f, 0.0f, 1.0f));
+
+	UpdateShaderMatrices();
+
+	quad->Draw();
+
+	glUseProgram(0);
+
+}
