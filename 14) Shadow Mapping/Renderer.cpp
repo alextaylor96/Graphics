@@ -125,7 +125,7 @@ void Renderer::DrawMesh() {
 	modelMatrix.ToIdentity();
 	Matrix4 tempMatrix = textureMatrix * modelMatrix;
 	glUniformMatrix4fv(glGetUniformLocation(currentShader->GetProgram(), "textureMatrix"), 1, false, *&tempMatrix.values);
-	glUniformMatrix4fv(glGetUniformLocation(currentShader->GetProgram(), "modelMatrix"), 1, false, *&tempMatrix.values);
+	glUniformMatrix4fv(glGetUniformLocation(currentShader->GetProgram(), "modelMatrix"), 1, false, *&modelMatrix.values);
 	hellNode->Draw(*this);
 }
 
@@ -133,6 +133,6 @@ void Renderer::DrawFloor() {
 	modelMatrix = Matrix4::Rotation(90, Vector3(1, 0, 0)) * Matrix4::Scale(Vector3(450, 450, 1));
 	Matrix4 tempMatrix = textureMatrix * modelMatrix;
 	glUniformMatrix4fv(glGetUniformLocation(currentShader->GetProgram(), "textureMatrix"), 1, false, *&tempMatrix.values);
-	glUniformMatrix4fv(glGetUniformLocation(currentShader->GetProgram(), "modelMatrix"), 1, false, *&tempMatrix.values);
+	glUniformMatrix4fv(glGetUniformLocation(currentShader->GetProgram(), "modelMatrix"), 1, false, *&modelMatrix.values);
 	floor->Draw();	
 }
