@@ -108,7 +108,7 @@ void Renderer::DrawCombinedScene() {
 
 	SetShaderLight(*light);
 
-	glActiveTexture(GL_TEXTURE0);
+	glActiveTexture(GL_TEXTURE2);
 	glBindTexture(GL_TEXTURE_2D, shadowTex);
 
 	viewMatrix = camera->BuildViewMatrix();
