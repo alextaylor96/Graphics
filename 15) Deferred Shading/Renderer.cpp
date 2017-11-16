@@ -42,7 +42,7 @@ Renderer::Renderer(Window &parent) :OGLRenderer(parent) {
 	if (!combineShader->LinkProgram()) {
 		return;
 	}
-	pointlightShader = new Shader(SHADERDIR"pointlightvert.glsl", SHADERDIR"pointlightfrag.glsl");
+	pointlightShader = new Shader(SHADERDIR"pointlightvert.glsl", SHADERDIR"pointlightfragment.glsl");
 	if (!pointlightShader->LinkProgram()) {
 		return;
 	}
@@ -207,3 +207,26 @@ void Renderer::DrawPointLights() {
 	}
 }
 
+void Renderer::CombineBuffers() {
+	SetCurrentShader(combineShader);
+	projMatrix = Matrix4::Orthographic(-1, 1, 1, -1, -1, 1);
+	UpdateShaderMatrices();
+
+
+	glUniform1i(glGetUniformLocation(currentShader->GetProgram(), "diffuseTex"), 2);
+	glUniform1i(glGetUniformLocation(currentShader->GetProgram(), "emissiveTex"), 3);
+	glUniform1i(glGetUniformLocation(currentShader->GetProgram(), "specularTex"), 4);
+
+	glActiveTexture(GL_TEXTURE2);
+	glBindTexture(GL_TEXTURE_2D, bufferColourTex);
+
+	glActiveTexture(GL_TEXTURE3);
+	glBindTexture(GL_TEXTURE_2D, lightEmissiveTex);
+	
+	glActiveTexture(GL_TEXTURE4);
+	glBindTexture(GL_TEXTURE_2D, lightSpecularTex);
+
+	quad->Draw();
+
+	glUseProgram(0);
+}
