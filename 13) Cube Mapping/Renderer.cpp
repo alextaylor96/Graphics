@@ -1,4 +1,5 @@
 #include "Renderer.h"
+//cube with tes/geo shader and explode with lazer with bloom effect, water with reflection, lights everywhere for multiple lights maybe fire with particles,sahdows on md5 mesh,maybe lightning
 
 Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
 	camera = new Camera();
@@ -13,6 +14,7 @@ Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
 	reflectShader = new Shader(SHADERDIR"PerPixelVertex.glsl", SHADERDIR"reflectFragment.glsl");
 	skyboxShader = new Shader(SHADERDIR"skyboxVertex.glsl", SHADERDIR"skyboxFragment.glsl");
 	lightShader = new Shader(SHADERDIR"PerPixelVertex.glsl", SHADERDIR"PerPixelFragment.glsl");
+	textShader = new Shader(SHADERDIR"TexturedVertex.glsl", SHADERDIR"TexturedFragment.glsl");
 
 	if (!reflectShader->LinkProgram()) {
 		return;
@@ -23,6 +25,9 @@ Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
 	if (!lightShader->LinkProgram()) {
 		return;
 	}
+	if (!textShader->LinkProgram()) {
+		return;
+	}
 
 	quad->SetTexture(SOIL_load_OGL_texture(TEXTUREDIR"water.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS));
 	heightMap->SetTexture(SOIL_load_OGL_texture(TEXTUREDIR"Barren Reds.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS));
@@ -31,6 +36,8 @@ Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
 	cubeMap = SOIL_load_OGL_cubemap(TEXTUREDIR"rusted_west.jpg",TEXTUREDIR"rusted_east.jpg", TEXTUREDIR"rusted_up.jpg",
 		TEXTUREDIR"rusted_down.jpg", TEXTUREDIR"rusted_south.jpg", TEXTUREDIR"rusted_north.jpg",
 		SOIL_LOAD_RGB, SOIL_CREATE_NEW_ID,0);
+
+	//basicFont = new Font(SOIL_load_OGL_texture(TEXTUREDIR"tahoma.tga", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_COMPRESS_TO_DXT), 16, 16);
 
 	if (!cubeMap) {
 		return;
@@ -52,8 +59,8 @@ Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
 	waterRotate = 0.0f;
 	projMatrix = Matrix4::Perspective(1.0f, 15000.0f, (float)width / (float)height, 45.0f);
 	glEnable(GL_DEPTH_TEST);
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	//glEnable(GL_BLEND);
+	//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 }
 
@@ -79,6 +86,8 @@ void Renderer::RenderScene() {
 	DrawSkybox();
 	DrawHeightmap();
 	DrawWater();
+	DrawText("LOLOLOL", Vector3(0.0f, 0.0f, 0.0f), 16.0f);
+
 	SwapBuffers();
 }
 
@@ -127,7 +136,45 @@ void Renderer::DrawWater() {
 	UpdateShaderMatrices();
 
 	quad->Draw();
-
+	glActiveTexture(0);
 	glUseProgram(0);
+}
 
+void Renderer::DrawText(const std::string &text, const Vector3 &position, const float size) {
+	modelMatrix.ToIdentity();
+	textureMatrix.ToIdentity();
+
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+	//glBlendFunc(GL_ONE, GL_ONE);
+
+	SetCurrentShader(textShader);
+
+	Font* basicFont = new Font(SOIL_load_OGL_texture(TEXTUREDIR"tahoma.tga", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_COMPRESS_TO_DXT), 16, 16);
+
+	//Create a new temporary TextMesh, using our line of text and our font
+	TextMesh* mesh = new TextMesh(text, *basicFont);
+
+	
+	//glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, mesh->GetTexture());
+
+	glUniform1i(glGetUniformLocation(currentShader->GetProgram(), "diffuseTex"), 0);
+	
+	modelMatrix = Matrix4::Translation(Vector3(position.x, height - position.y, position.z)) * Matrix4::Scale(Vector3(size, size, 1));
+	viewMatrix.ToIdentity();
+	projMatrix = Matrix4::Orthographic(-1.0f, 1.0f, (float)width, 0.0f, (float)height, 0.0f);
+
+	
+	UpdateShaderMatrices();
+
+	mesh->Draw();
+
+	delete mesh; 
+
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	
+	projMatrix = Matrix4::Perspective(1.0f, 15000.0f, (float)width / (float)height, 45.0f);
+	//glDisable(GL_BLEND);
+	glUseProgram(0);
 }

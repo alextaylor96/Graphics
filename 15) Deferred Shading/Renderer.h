@@ -5,7 +5,7 @@
 #include "../../nclgl/OBJmesh.h"
 #include "../../nclgl/heightmap.h"
 
-#define LIGHTNUM 8
+#define LIGHTNUM 2
 
 class Renderer : public OGLRenderer {
 public:

@@ -2,6 +2,7 @@
 #include "../../nclgl/OGLRenderer.h"
 #include "../../nclgl/Camera.h"
 #include "../../nclgl/HeightMap.h"
+#include "../../nclgl/textmesh.h"
 
 class Renderer : public OGLRenderer {
 public:
@@ -10,15 +11,18 @@ public:
 
 	virtual void RenderScene();
 	virtual void UpdateScene(float msec);
+	
 
 protected:
 	void DrawHeightmap();
 	void DrawWater();
 	void DrawSkybox();
+	void DrawText(const std::string &text, const Vector3 &position, const float size = 10.0f);
 
 	Shader * lightShader;
 	Shader * reflectShader;
 	Shader * skyboxShader;
+	Shader* textShader;
 
 	HeightMap * heightMap;
 	Mesh * quad;
@@ -28,5 +32,6 @@ protected:
 
 	GLuint cubeMap;
 
+	//Font*	basicFont;
 	float waterRotate;
 };

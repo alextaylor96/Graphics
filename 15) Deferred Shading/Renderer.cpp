@@ -34,6 +34,9 @@ Renderer::Renderer(Window &parent) :OGLRenderer(parent) {
 	if (!sphere->LoadOBJMesh(MESHDIR"ico.obj")) {
 		return;
 	}
+	sphere->GenerateNormals();
+	sphere->BufferData();
+
 	sceneShader = new Shader(SHADERDIR"BumpVertex.glsl", SHADERDIR"bufferFragment.glsl");
 	if (!sceneShader->LinkProgram()) {
 		return;
@@ -46,6 +49,8 @@ Renderer::Renderer(Window &parent) :OGLRenderer(parent) {
 	if (!pointlightShader->LinkProgram()) {
 		return;
 	}
+
+	SetCurrentShader(sceneShader);
 
 	glGenFramebuffers(1, &bufferFBO);
 	glGenFramebuffers(1, &pointLightFBO);
@@ -107,6 +112,8 @@ Renderer::~Renderer(void) {
 }
 
 void Renderer::GenerateScreenTexture(GLuint &into, bool depth) {
+	SetCurrentShader(sceneShader);
+
 	glGenTextures(1, &into);
 	glBindTexture(GL_TEXTURE_2D, into);
 
@@ -129,17 +136,20 @@ void Renderer::UpdateScene(float msec) {
 void Renderer::RenderScene() {
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+
 	FillBuffers();
 	DrawPointLights();
 	CombineBuffers();
+
 	SwapBuffers();
 }
 
 void Renderer::FillBuffers() {
+	SetCurrentShader(sceneShader);
+
 	glBindFramebuffer(GL_FRAMEBUFFER, bufferFBO);
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 
-	SetCurrentShader(sceneShader);
 
 	glUniform1i(glGetUniformLocation(currentShader->GetProgram(), "diffuseTex"), 0);
 	glUniform1i(glGetUniformLocation(currentShader->GetProgram(), "bumpTex"), 1);
@@ -156,7 +166,7 @@ void Renderer::FillBuffers() {
 
 void Renderer::DrawPointLights() {
 	SetCurrentShader(pointlightShader);
-	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+	//glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 	glClearColor(0, 0, 0, 1);
 	glClear(GL_COLOR_BUFFER_BIT);
 	glBlendFunc(GL_ONE, GL_ONE);
@@ -203,7 +213,7 @@ void Renderer::DrawPointLights() {
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		glClearColor(0.2f, 0.2f, 0.2f, 1);
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		glUseProgram(0);
+		//glUseProgram(0);
 	}
 }
 
