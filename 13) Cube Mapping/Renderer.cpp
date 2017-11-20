@@ -2,20 +2,21 @@
 //gem with bloom with tes/geo shader and explode with lazer with bloom effect, display next scene in corner with some blur, water with reflection, lights everywhere for multiple lights maybe fire with particles,sahdows on md5 mesh,maybe lightning
 
 
-//add shadows
+//improve shadow scene
 //fix framerate flickering
 
 Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
 	camera = new Camera();
 	heightMap = new HeightMap(TEXTUREDIR"terrain.raw");
 	quad = Mesh::GenerateQuad();
+	subscene = Mesh::GenerateQuad();
 
 	camera->SetPitch(0.0f);
 	camera->SetYaw(350.0f);
 	camera->SetPosition(Vector3(1800.0f, 280.0f, 2900.0f));
 
 	light = new Light(Vector3((RAW_HEIGHT*HEIGHTMAP_X / 2.0f) - 500.0f, 1000.0F, (RAW_HEIGHT*HEIGHTMAP_Z / 2.0f)),
-		Vector4(0.9f, 0.9f, 1.0f, 1), (RAW_WIDTH*HEIGHTMAP_X / 2.0f) );
+		Vector4(0.9f, 0.9f, 1.0f, 1), (RAW_WIDTH*HEIGHTMAP_X / 2.0f));
 
 	reflectShader = new Shader(SHADERDIR"PerPixelVertex.glsl", SHADERDIR"reflectFragment.glsl");
 	skyboxShader = new Shader(SHADERDIR"skyboxVertex.glsl", SHADERDIR"skyboxFragment.glsl");
@@ -47,14 +48,15 @@ Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
 	if (!textShader->LinkProgram()) {
 		return;
 	}
-	
+
 	quad->SetTexture(SOIL_load_OGL_texture(TEXTUREDIR"water.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS));
 	heightMap->SetTexture(SOIL_load_OGL_texture(TEXTUREDIR"sand.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS));
 	heightMap->SetBumpMap(SOIL_load_OGL_texture(TEXTUREDIR"sandbump.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS));
 
-	cubeMap = SOIL_load_OGL_cubemap(TEXTUREDIR"rusted_west.jpg",TEXTUREDIR"rusted_east.jpg", TEXTUREDIR"rusted_up.jpg",
+
+	cubeMap = SOIL_load_OGL_cubemap(TEXTUREDIR"rusted_west.jpg", TEXTUREDIR"rusted_east.jpg", TEXTUREDIR"rusted_up.jpg",
 		TEXTUREDIR"rusted_down.jpg", TEXTUREDIR"rusted_south.jpg", TEXTUREDIR"rusted_north.jpg",
-		SOIL_LOAD_RGB, SOIL_CREATE_NEW_ID,0);
+		SOIL_LOAD_RGB, SOIL_CREATE_NEW_ID, 0);
 
 	basicFont = new Font(SOIL_load_OGL_texture(TEXTUREDIR"tahoma.tga", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_COMPRESS_TO_DXT), 16, 16);
 
@@ -76,6 +78,7 @@ Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
 	SetTextureRepeating(heightMap->GetTexture(), true);
 	SetTextureRepeating(heightMap->GetBumpMap(), true);
 
+	//fbo used in shadow mapping
 	glGenTextures(1, &shadowMap);
 	glBindTexture(GL_TEXTURE_2D, shadowMap);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -92,6 +95,28 @@ Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, shadowMap, 0);
 	glDrawBuffer(GL_NONE);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	//create fbo to render none main scene into
+	glGenTextures(1, &subSceneTex);
+	glBindTexture(GL_TEXTURE_2D, subSceneTex);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOWSIZE, SHADOWSIZE, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_R_TO_TEXTURE);
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	glGenFramebuffers(1, &subSceneFBO);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, subSceneFBO);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, subSceneTex, 0);
+	glDrawBuffer(GL_NONE);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE){
+		return ;
+    }
 
 	floor = Mesh::GenerateQuad();
 	floor->SetTexture(SOIL_load_OGL_texture(TEXTUREDIR"brick.tga", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS));
@@ -120,6 +145,8 @@ Renderer::~Renderer(void) {
 	delete hellNode;
 	delete sceneShader;
 	delete shadowShader;
+	delete subscene;
+	glDeleteFramebuffers(1, &subSceneFBO);
 	currentShader = 0;
 }
 
@@ -170,6 +197,22 @@ void Renderer::RenderScene() {
 	SwapBuffers();
 }
 
+void Renderer::DrawSubScene() {
+	glBindFramebuffer(GL_FRAMEBUFFER, subSceneFBO);
+	if (currentScene == 2) {
+		DrawSkybox();
+		DrawHeightmap();
+		DrawWater();
+		DrawHellKnight();
+		DrawFPS("FPS: ", Vector3(0.0f, 0.0f, 0.0f), 16.0f);
+	}
+	if (currentScene == 1) {
+		DrawShadowScene();
+		DrawCombinedScene();
+		DrawFPS("FPS: ", Vector3(0.0f, 0.0f, 0.0f), 16.0f);
+	}
+	SwapBuffers();
+}
 
 void Renderer::DrawSkybox() {
 	glDepthMask(GL_FALSE);
