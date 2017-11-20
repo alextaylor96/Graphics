@@ -16,22 +16,23 @@ public:
 
 	virtual void RenderScene();
 	virtual void UpdateScene(float msec);
-	
+
+	void changeScene(int changeTo);
 
 protected:
+	int currentScene = 1;
+
 	void DrawHeightmap();
 	void DrawWater();
 	void DrawSkybox();
 	void DrawHellKnight();
 	void DrawFPS(const std::string &text, const Vector3 &position, const float size = 10.0f);
 
-	void DrawShadowMap();
-
 	Shader * lightShader;
 	Shader * reflectShader;
 	Shader * skyboxShader;
 	Shader* textShader;
-	Shader* shadowShader;
+
 
 	HeightMap * heightMap;
 	Mesh * quad;
@@ -43,7 +44,6 @@ protected:
 	Camera * camera;
 
 	GLuint cubeMap;
-	GLuint shadowMap;
 
 	float fps = 0;
 	float recentFps[100];
@@ -51,4 +51,16 @@ protected:
 
 	Font*	basicFont;
 	float waterRotate;
+
+	void DrawMesh();
+	void DrawFloor();
+	void DrawShadowScene();
+	void DrawCombinedScene();
+
+	Shader* sceneShader;
+	Shader* shadowShader;
+
+	GLuint shadowMap;
+	GLuint shadowFBO;
+	Mesh* floor;
 };

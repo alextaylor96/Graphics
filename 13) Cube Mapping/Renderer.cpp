@@ -10,7 +10,7 @@ Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
 	heightMap = new HeightMap(TEXTUREDIR"terrain.raw");
 	quad = Mesh::GenerateQuad();
 
-	camera->SetPosition(Vector3(RAW_WIDTH*HEIGHTMAP_X / 2.0f, 500.0f, RAW_WIDTH*HEIGHTMAP_X));
+	camera = new Camera(0.0f, 350.0f, Vector3(1800.0f, 280.0f, 2900.0f));
 
 	light = new Light(Vector3((RAW_HEIGHT*HEIGHTMAP_X / 2.0f) - 500.0f, 1000.0F, (RAW_HEIGHT*HEIGHTMAP_Z / 2.0f)),
 		Vector4(0.9f, 0.9f, 1.0f, 1), (RAW_WIDTH*HEIGHTMAP_X / 2.0f) );
@@ -19,7 +19,13 @@ Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
 	skyboxShader = new Shader(SHADERDIR"skyboxVertex.glsl", SHADERDIR"skyboxFragment.glsl");
 	lightShader = new Shader(SHADERDIR"PerPixelVertex.glsl", SHADERDIR"PerPixelFragment.glsl");
 	textShader = new Shader(SHADERDIR"TexturedVertex.glsl", SHADERDIR"TexturedFragment.glsl");
-	
+	sceneShader = new Shader(SHADERDIR"shadowscenevert.glsl", SHADERDIR"shadowscenefrag.glsl");
+	shadowShader = new Shader(SHADERDIR"shadowVert.glsl", SHADERDIR"shadowFrag.glsl");
+
+	if (!sceneShader->LinkProgram() || !shadowShader->LinkProgram()) {
+		return;
+	}
+
 
 	hellData = new MD5FileData(MESHDIR"hellKnight.md5mesh");
 	hellNode = new MD5Node(*hellData);
@@ -68,13 +74,36 @@ Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
 	SetTextureRepeating(heightMap->GetTexture(), true);
 	SetTextureRepeating(heightMap->GetBumpMap(), true);
 
-	init = true;
+	glGenTextures(1, &shadowMap);
+	glBindTexture(GL_TEXTURE_2D, shadowMap);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOWSIZE, SHADOWSIZE, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_R_TO_TEXTURE);
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	glGenFramebuffers(1, &shadowFBO);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, shadowFBO);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, shadowMap, 0);
+	glDrawBuffer(GL_NONE);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	floor = Mesh::GenerateQuad();
+	floor->SetTexture(SOIL_load_OGL_texture(TEXTUREDIR"brick.tga", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS));
+	floor->SetBumpMap(SOIL_load_OGL_texture(TEXTUREDIR"brickDOT3.tga", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS));
+
 	waterRotate = 0.0f;
 	projMatrix = Matrix4::Perspective(1.0f, 15000.0f, (float)width / (float)height, 45.0f);
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
+
+
+	init = true;
 }
 
 Renderer::~Renderer(void) {
@@ -87,6 +116,8 @@ Renderer::~Renderer(void) {
 	delete light;
 	delete hellData;
 	delete hellNode;
+	delete sceneShader;
+	delete shadowShader;
 	currentShader = 0;
 }
 
@@ -100,14 +131,36 @@ void Renderer::UpdateScene(float msec) {
 	recentFps[framesLookup] = fps;
 }
 
+void Renderer::changeScene(int changeTo)
+{
+	if (changeTo == 1) {
+		camera = new Camera(0.0f, 350.0f, Vector3(1800.0f, 280.0f, 2900.0f));
+		light = new Light(Vector3((RAW_HEIGHT*HEIGHTMAP_X / 2.0f) - 500.0f, 1000.0F, (RAW_HEIGHT*HEIGHTMAP_Z / 2.0f)),
+			Vector4(0.9f, 0.9f, 1.0f, 1), (RAW_WIDTH*HEIGHTMAP_X / 2.0f));
+		currentScene = 1;
+	}
+	if (changeTo == 2) {
+		camera = new Camera(-8.0f, 40.0f, Vector3(350.0f, 200.0f, 450.0f));
+		light = new Light(Vector3(-450.f, 200.0f, 280.f), Vector4(1, 1, 1, 1), 5500.0f);
+		currentScene = 2;
+	}
+}
+
 void Renderer::RenderScene() {
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
-	DrawSkybox();
-	DrawHeightmap();
-	DrawWater();
-	DrawHellKnight();
-	DrawFPS("FPS: ", Vector3(0.0f, 0.0f, 0.0f), 16.0f);
 
+	if (currentScene == 1) {
+		DrawSkybox();
+		DrawHeightmap();
+		DrawWater();
+		DrawHellKnight();
+		DrawFPS("FPS: ", Vector3(0.0f, 0.0f, 0.0f), 16.0f);
+	}
+	if (currentScene == 2) {
+		DrawShadowScene();
+		DrawCombinedScene();
+		DrawFPS("FPS: ", Vector3(0.0f, 0.0f, 0.0f), 16.0f);
+	}
 	SwapBuffers();
 }
 
@@ -230,3 +283,75 @@ void Renderer::DrawFPS(const std::string &text, const Vector3 &position, const f
 }
 
 
+void Renderer::DrawShadowScene() {
+	glBindFramebuffer(GL_FRAMEBUFFER, shadowFBO);
+
+	glClear(GL_DEPTH_BUFFER_BIT);
+
+	glViewport(0, 0, SHADOWSIZE, SHADOWSIZE);
+
+	glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+
+	SetCurrentShader(shadowShader);
+
+	viewMatrix = Matrix4::BuildViewMatrix(light->GetPosition(), Vector3(0, 0, 0));
+	textureMatrix = biasMatrix*(projMatrix*viewMatrix);
+
+	UpdateShaderMatrices();
+
+	DrawFloor();
+	DrawMesh();
+
+	glUseProgram(0);
+	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+	glViewport(0, 0, width, height);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+void Renderer::DrawCombinedScene() {
+	SetCurrentShader(sceneShader);
+
+	glUniform1i(glGetUniformLocation(currentShader->GetProgram(), "diffuseTex"), 0);
+	glUniform1i(glGetUniformLocation(currentShader->GetProgram(), "bumpTex"), 1);
+	glUniform1i(glGetUniformLocation(currentShader->GetProgram(), "shadowTex"), 2);
+
+	glUniform3fv(glGetUniformLocation(currentShader->GetProgram(), "cameraPos"), 1, (float*)&camera->GetPosition());
+
+	SetShaderLight(*light);
+
+	glActiveTexture(GL_TEXTURE2);
+	glBindTexture(GL_TEXTURE_2D, shadowMap);
+
+	viewMatrix = camera->BuildViewMatrix();
+
+	UpdateShaderMatrices();
+
+	DrawFloor();
+	DrawMesh();
+
+	glUseProgram(0);
+}
+
+void Renderer::DrawMesh() {
+	modelMatrix.ToIdentity();
+	Matrix4 tempMatrix = textureMatrix * modelMatrix;
+	glUniformMatrix4fv(glGetUniformLocation(currentShader->GetProgram(), "textureMatrix"), 1, false, *&tempMatrix.values);
+	glUniformMatrix4fv(glGetUniformLocation(currentShader->GetProgram(), "modelMatrix"), 1, false, *&modelMatrix.values);
+	hellNode->Draw(*this);
+}
+
+void Renderer::DrawFloor() {
+	modelMatrix = Matrix4::Rotation(90, Vector3(1, 0, 0)) * Matrix4::Scale(Vector3(450, 450, 1));
+	Matrix4 tempMatrix = textureMatrix * modelMatrix;
+	glUniformMatrix4fv(glGetUniformLocation(currentShader->GetProgram(), "textureMatrix"), 1, false, *&tempMatrix.values);
+	glUniformMatrix4fv(glGetUniformLocation(currentShader->GetProgram(), "modelMatrix"), 1, false, *&modelMatrix.values);
+
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, floor->GetTexture());
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, floor->GetBumpMap());
+
+	floor->Draw();
+}
