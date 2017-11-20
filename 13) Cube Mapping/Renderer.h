@@ -25,10 +25,6 @@ protected:
 	void DrawHellKnight();
 	void DrawFPS(const std::string &text, const Vector3 &position, const float size = 10.0f);
 
-	void DrawShadowScene();
-	void DrawCombinedScene();
-
-
 	Shader * lightShader;
 	Shader * reflectShader;
 	Shader * skyboxShader;
