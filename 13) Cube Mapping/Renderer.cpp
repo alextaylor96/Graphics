@@ -10,14 +10,16 @@ Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
 	heightMap = new HeightMap(TEXTUREDIR"terrain.raw");
 	quad = Mesh::GenerateQuad();
 
-	camera = new Camera(0.0f, 350.0f, Vector3(1800.0f, 280.0f, 2900.0f));
+	camera->SetPitch(0.0f);
+	camera->SetYaw(350.0f);
+	camera->SetPosition(Vector3(1800.0f, 280.0f, 2900.0f));
 
 	light = new Light(Vector3((RAW_HEIGHT*HEIGHTMAP_X / 2.0f) - 500.0f, 1000.0F, (RAW_HEIGHT*HEIGHTMAP_Z / 2.0f)),
 		Vector4(0.9f, 0.9f, 1.0f, 1), (RAW_WIDTH*HEIGHTMAP_X / 2.0f) );
 
 	reflectShader = new Shader(SHADERDIR"PerPixelVertex.glsl", SHADERDIR"reflectFragment.glsl");
 	skyboxShader = new Shader(SHADERDIR"skyboxVertex.glsl", SHADERDIR"skyboxFragment.glsl");
-	lightShader = new Shader(SHADERDIR"PerPixelVertex.glsl", SHADERDIR"PerPixelFragment.glsl");
+	lightShader = new Shader(SHADERDIR"BumpVertex.glsl", SHADERDIR"BumpFragment.glsl");
 	textShader = new Shader(SHADERDIR"TexturedVertex.glsl", SHADERDIR"TexturedFragment.glsl");
 	sceneShader = new Shader(SHADERDIR"shadowscenevert.glsl", SHADERDIR"shadowscenefrag.glsl");
 	shadowShader = new Shader(SHADERDIR"shadowVert.glsl", SHADERDIR"shadowFrag.glsl");
@@ -47,7 +49,7 @@ Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
 	}
 	
 	quad->SetTexture(SOIL_load_OGL_texture(TEXTUREDIR"water.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS));
-	heightMap->SetTexture(SOIL_load_OGL_texture(TEXTUREDIR"Barren Reds.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS));
+	heightMap->SetTexture(SOIL_load_OGL_texture(TEXTUREDIR"sand.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS));
 	heightMap->SetBumpMap(SOIL_load_OGL_texture(TEXTUREDIR"Barren RedsDOT3.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS));
 
 	cubeMap = SOIL_load_OGL_cubemap(TEXTUREDIR"rusted_west.jpg",TEXTUREDIR"rusted_east.jpg", TEXTUREDIR"rusted_up.jpg",
@@ -134,13 +136,17 @@ void Renderer::UpdateScene(float msec) {
 void Renderer::changeScene(int changeTo)
 {
 	if (changeTo == 1) {
-		camera = new Camera(0.0f, 350.0f, Vector3(1800.0f, 280.0f, 2900.0f));
+		camera->SetPitch(0.0f);
+		camera->SetYaw(350.0f);
+		camera->SetPosition(Vector3(1800.0f, 280.0f, 2900.0f));
 		light = new Light(Vector3((RAW_HEIGHT*HEIGHTMAP_X / 2.0f) - 500.0f, 1000.0F, (RAW_HEIGHT*HEIGHTMAP_Z / 2.0f)),
 			Vector4(0.9f, 0.9f, 1.0f, 1), (RAW_WIDTH*HEIGHTMAP_X / 2.0f));
 		currentScene = 1;
 	}
 	if (changeTo == 2) {
-		camera = new Camera(-8.0f, 40.0f, Vector3(350.0f, 200.0f, 450.0f));
+		camera->SetPitch(-8.0f);
+		camera->SetYaw(40.0f);
+		camera->SetPosition(Vector3(350.0f, 200.0f, 450.0f));
 		light = new Light(Vector3(-450.f, 200.0f, 280.f), Vector4(1, 1, 1, 1), 5500.0f);
 		currentScene = 2;
 	}
