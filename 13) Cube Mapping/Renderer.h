@@ -7,6 +7,7 @@
 #include "../../nclgl/MD5Node.h"
 #include "../../nclgl/OBJmesh.h"
 
+#define SHADOWSIZE 2048
 
 class Renderer : public OGLRenderer {
 public:
@@ -24,10 +25,15 @@ protected:
 	void DrawHellKnight();
 	void DrawFPS(const std::string &text, const Vector3 &position, const float size = 10.0f);
 
+	void DrawShadowScene();
+	void DrawCombinedScene();
+
+
 	Shader * lightShader;
 	Shader * reflectShader;
 	Shader * skyboxShader;
 	Shader* textShader;
+	Shader* shadowShader;
 
 	HeightMap * heightMap;
 	Mesh * quad;
@@ -39,6 +45,7 @@ protected:
 	Camera * camera;
 
 	GLuint cubeMap;
+	GLuint shadowTex;
 
 	float fps = 0;
 	float recentFps[100];
