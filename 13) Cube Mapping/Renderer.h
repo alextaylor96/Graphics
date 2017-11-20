@@ -3,6 +3,9 @@
 #include "../../nclgl/Camera.h"
 #include "../../nclgl/HeightMap.h"
 #include "../../nclgl/textmesh.h"
+#include "../../nclgl/MD5Mesh.h"
+#include "../../nclgl/MD5Node.h"
+
 
 class Renderer : public OGLRenderer {
 public:
@@ -17,6 +20,7 @@ protected:
 	void DrawHeightmap();
 	void DrawWater();
 	void DrawSkybox();
+	void DrawHellKnight();
 	void DrawFPS(const std::string &text, const Vector3 &position, const float size = 10.0f);
 
 	Shader * lightShader;
@@ -27,6 +31,8 @@ protected:
 	HeightMap * heightMap;
 	Mesh * quad;
 
+	MD5FileData* hellData;
+	MD5Node* hellNode;
 	Light * light;
 	Camera * camera;
 

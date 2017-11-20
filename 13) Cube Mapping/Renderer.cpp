@@ -1,6 +1,10 @@
 #include "Renderer.h"
 //gem with bloom with tes/geo shader and explode with lazer with bloom effect, display next scene in corner with some blur, water with reflection, lights everywhere for multiple lights maybe fire with particles,sahdows on md5 mesh,maybe lightning
 
+//add hellknight to scene
+//add shadows
+//fix framerate flickering
+
 Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
 	camera = new Camera();
 	heightMap = new HeightMap(TEXTUREDIR"terrain.raw");
@@ -15,6 +19,12 @@ Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
 	skyboxShader = new Shader(SHADERDIR"skyboxVertex.glsl", SHADERDIR"skyboxFragment.glsl");
 	lightShader = new Shader(SHADERDIR"PerPixelVertex.glsl", SHADERDIR"PerPixelFragment.glsl");
 	textShader = new Shader(SHADERDIR"TexturedVertex.glsl", SHADERDIR"TexturedFragment.glsl");
+
+	hellData = new MD5FileData(MESHDIR"hellKnight.md5mesh");
+	hellNode = new MD5Node(*hellData);
+
+	hellData->AddAnim(MESHDIR"idle2.md5anim");
+	hellNode->PlayAnim(MESHDIR"idle2.md5anim");
 
 	if (!reflectShader->LinkProgram()) {
 		return;
@@ -72,11 +82,14 @@ Renderer::~Renderer(void) {
 	delete skyboxShader;
 	delete lightShader;
 	delete light;
+	delete hellData;
+	delete hellNode;
 	currentShader = 0;
 }
 
 void Renderer::UpdateScene(float msec) {
 	camera->UpdateCamera(msec);
+	hellNode->Update(msec);
 	viewMatrix = camera->BuildViewMatrix();
 	waterRotate += msec / 1000.0f;
 	fps = (1000/msec);
@@ -89,6 +102,7 @@ void Renderer::RenderScene() {
 	DrawSkybox();
 	DrawHeightmap();
 	DrawWater();
+	DrawHellKnight();
 	DrawFPS("FPS: ", Vector3(0.0f, 0.0f, 0.0f), 16.0f);
 
 	SwapBuffers();
@@ -103,6 +117,22 @@ void Renderer::DrawSkybox() {
 	glDepthMask(GL_TRUE);
 }
 
+void Renderer::DrawHellKnight()
+{
+	SetCurrentShader(textShader);
+	modelMatrix.ToIdentity();
+	modelMatrix = Matrix4::Translation(Vector3(2000, 500, 2000));
+	textureMatrix.ToIdentity();
+
+	glUniform1i(glGetUniformLocation(currentShader->GetProgram(), "diffuseTex"), 0);
+
+	UpdateShaderMatrices();
+
+	hellNode->Draw(*this);
+
+	glUseProgram(0);
+}
+
 void Renderer::DrawHeightmap() {
 	SetCurrentShader(lightShader);
 	SetShaderLight(*light);
@@ -114,6 +144,12 @@ void Renderer::DrawHeightmap() {
 	textureMatrix.ToIdentity();
 
 	UpdateShaderMatrices();
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, heightMap->GetTexture());
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, heightMap->GetBumpMap());
+
 	heightMap->Draw();
 
 	glUseProgram(0);
@@ -138,6 +174,11 @@ void Renderer::DrawWater() {
 
 	UpdateShaderMatrices();
 
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, quad->GetTexture());
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, quad->GetBumpMap());
+
 	quad->Draw();
 	glActiveTexture(0);
 	glUseProgram(0);
@@ -158,10 +199,6 @@ void Renderer::DrawFPS(const std::string &text, const Vector3 &position, const f
 	
 	TextMesh* mesh = new TextMesh(text + std::to_string((int)(temp/100)), *basicFont);
 
-	
-	//glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, mesh->GetTexture());
-
 	glUniform1i(glGetUniformLocation(currentShader->GetProgram(), "diffuseTex"), 0);
 	
 	modelMatrix = Matrix4::Translation(Vector3(position.x, height - position.y, position.z)) * Matrix4::Scale(Vector3(size, size, 1));
@@ -170,6 +207,11 @@ void Renderer::DrawFPS(const std::string &text, const Vector3 &position, const f
 
 	
 	UpdateShaderMatrices();
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, mesh->GetTexture());
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, mesh->GetBumpMap());
 
 	mesh->Draw();
 
