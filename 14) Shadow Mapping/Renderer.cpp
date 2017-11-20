@@ -18,8 +18,8 @@ Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
 		return;
 	}
 
-	glGenTextures(1, &shadowTex);
-	glBindTexture(GL_TEXTURE_2D, shadowTex);
+	glGenTextures(1, &shadowMap);
+	glBindTexture(GL_TEXTURE_2D, shadowMap);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -31,7 +31,7 @@ Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
 	glGenFramebuffers(1, &shadowFBO);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, shadowFBO);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, shadowTex, 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, shadowMap, 0);
 	glDrawBuffer(GL_NONE);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
@@ -46,7 +46,7 @@ Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
 }
 
 Renderer::~Renderer(void) {
-	glDeleteTextures(1,&shadowTex);
+	glDeleteTextures(1,&shadowMap);
 	glDeleteFramebuffers(1, &shadowFBO);
 	delete camera;
 	delete light;
@@ -109,7 +109,7 @@ void Renderer::DrawCombinedScene() {
 	SetShaderLight(*light);
 
 	glActiveTexture(GL_TEXTURE2);
-	glBindTexture(GL_TEXTURE_2D, shadowTex);
+	glBindTexture(GL_TEXTURE_2D, shadowMap);
 
 	viewMatrix = camera->BuildViewMatrix();
 

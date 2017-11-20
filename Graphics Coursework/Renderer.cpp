@@ -1,5 +1,9 @@
 #include "Renderer.h"
-//cube with tes/geo shader and explode with lazer with bloom effect, water with reflection, lights everywhere for multiple lights maybe fire with particles,sahdows on md5 mesh,maybe lightning
+//gem with bloom with tes/geo shader and explode with lazer with bloom effect, display next scene in corner with some blur, water with reflection, lights everywhere for multiple lights maybe fire with particles,sahdows on md5 mesh,maybe lightning
+
+
+//add shadows
+//fix framerate flickering
 
 Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
 	camera = new Camera();
@@ -9,12 +13,18 @@ Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
 	camera->SetPosition(Vector3(RAW_WIDTH*HEIGHTMAP_X / 2.0f, 500.0f, RAW_WIDTH*HEIGHTMAP_X));
 
 	light = new Light(Vector3((RAW_HEIGHT*HEIGHTMAP_X / 2.0f), 500.0F, (RAW_HEIGHT*HEIGHTMAP_Z / 2.0f)),
-		Vector4(0.9f, 0.9f, 1.0f, 1), (RAW_WIDTH*HEIGHTMAP_X / 2.0f));
+		Vector4(0.9f, 0.9f, 1.0f, 1), (RAW_WIDTH*HEIGHTMAP_X / 2.0f) * 2);
 
 	reflectShader = new Shader(SHADERDIR"PerPixelVertex.glsl", SHADERDIR"reflectFragment.glsl");
 	skyboxShader = new Shader(SHADERDIR"skyboxVertex.glsl", SHADERDIR"skyboxFragment.glsl");
 	lightShader = new Shader(SHADERDIR"PerPixelVertex.glsl", SHADERDIR"PerPixelFragment.glsl");
 	textShader = new Shader(SHADERDIR"TexturedVertex.glsl", SHADERDIR"TexturedFragment.glsl");
+
+	hellData = new MD5FileData(MESHDIR"hellKnight.md5mesh");
+	hellNode = new MD5Node(*hellData);
+
+	hellData->AddAnim(MESHDIR"idle2.md5anim");
+	hellNode->PlayAnim(MESHDIR"idle2.md5anim");
 
 	if (!reflectShader->LinkProgram()) {
 		return;
@@ -37,7 +47,7 @@ Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
 		TEXTUREDIR"rusted_down.jpg", TEXTUREDIR"rusted_south.jpg", TEXTUREDIR"rusted_north.jpg",
 		SOIL_LOAD_RGB, SOIL_CREATE_NEW_ID, 0);
 
-	//basicFont = new Font(SOIL_load_OGL_texture(TEXTUREDIR"tahoma.tga", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_COMPRESS_TO_DXT), 16, 16);
+	basicFont = new Font(SOIL_load_OGL_texture(TEXTUREDIR"tahoma.tga", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_COMPRESS_TO_DXT), 16, 16);
 
 	if (!cubeMap) {
 		return;
@@ -51,6 +61,8 @@ Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
 	if (!heightMap->GetBumpMap()) {
 		return;
 	}
+
+
 	SetTextureRepeating(quad->GetTexture(), true);
 	SetTextureRepeating(heightMap->GetTexture(), true);
 	SetTextureRepeating(heightMap->GetBumpMap(), true);
@@ -59,8 +71,8 @@ Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
 	waterRotate = 0.0f;
 	projMatrix = Matrix4::Perspective(1.0f, 15000.0f, (float)width / (float)height, 45.0f);
 	glEnable(GL_DEPTH_TEST);
-	//glEnable(GL_BLEND);
-	//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 }
 
@@ -72,13 +84,19 @@ Renderer::~Renderer(void) {
 	delete skyboxShader;
 	delete lightShader;
 	delete light;
+	delete hellData;
+	delete hellNode;
 	currentShader = 0;
 }
 
 void Renderer::UpdateScene(float msec) {
 	camera->UpdateCamera(msec);
+	hellNode->Update(msec);
 	viewMatrix = camera->BuildViewMatrix();
 	waterRotate += msec / 1000.0f;
+	fps = (1000 / msec);
+	framesLookup = (framesLookup + 1) % 100;
+	recentFps[framesLookup] = fps;
 }
 
 void Renderer::RenderScene() {
@@ -86,7 +104,8 @@ void Renderer::RenderScene() {
 	DrawSkybox();
 	DrawHeightmap();
 	DrawWater();
-	DrawFPS("LOLOLOL", Vector3(0.0f, 0.0f, 0.0f), 16.0f);
+	DrawHellKnight();
+	DrawFPS("FPS: ", Vector3(0.0f, 0.0f, 0.0f), 16.0f);
 
 	SwapBuffers();
 }
@@ -100,6 +119,23 @@ void Renderer::DrawSkybox() {
 	glDepthMask(GL_TRUE);
 }
 
+void Renderer::DrawHellKnight()
+{
+	SetCurrentShader(textShader);
+	modelMatrix.ToIdentity();
+	modelMatrix = Matrix4::Translation(Vector3(2400, 280, 2000));
+	textureMatrix.ToIdentity();
+
+	glUniform1i(glGetUniformLocation(currentShader->GetProgram(), "diffuseTex"), 0);
+
+	UpdateShaderMatrices();
+
+	hellNode->Draw(*this);
+
+	glUseProgram(0);
+}
+
+
 void Renderer::DrawHeightmap() {
 	SetCurrentShader(lightShader);
 	SetShaderLight(*light);
@@ -111,6 +147,12 @@ void Renderer::DrawHeightmap() {
 	textureMatrix.ToIdentity();
 
 	UpdateShaderMatrices();
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, heightMap->GetTexture());
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, heightMap->GetBumpMap());
+
 	heightMap->Draw();
 
 	glUseProgram(0);
@@ -135,6 +177,11 @@ void Renderer::DrawWater() {
 
 	UpdateShaderMatrices();
 
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, quad->GetTexture());
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, quad->GetBumpMap());
+
 	quad->Draw();
 	glActiveTexture(0);
 	glUseProgram(0);
@@ -144,20 +191,16 @@ void Renderer::DrawFPS(const std::string &text, const Vector3 &position, const f
 	modelMatrix.ToIdentity();
 	textureMatrix.ToIdentity();
 
-	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-	//glBlendFunc(GL_ONE, GL_ONE);
 
 	SetCurrentShader(textShader);
 
-	Font* basicFont = new Font(SOIL_load_OGL_texture(TEXTUREDIR"tahoma.tga", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_COMPRESS_TO_DXT), 16, 16);
+	float temp = 0;
+	for (int i = 0; i < 100; ++i) {
+		temp += recentFps[i];
+	}
 
-	//Create a new temporary TextMesh, using our line of text and our font
-	TextMesh* mesh = new TextMesh(text, *basicFont);
-
-
-	//glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, mesh->GetTexture());
+	TextMesh* mesh = new TextMesh(text + std::to_string((int)(temp / 100)), *basicFont);
 
 	glUniform1i(glGetUniformLocation(currentShader->GetProgram(), "diffuseTex"), 0);
 
@@ -168,6 +211,11 @@ void Renderer::DrawFPS(const std::string &text, const Vector3 &position, const f
 
 	UpdateShaderMatrices();
 
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, mesh->GetTexture());
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, mesh->GetBumpMap());
+
 	mesh->Draw();
 
 	delete mesh;
@@ -175,6 +223,6 @@ void Renderer::DrawFPS(const std::string &text, const Vector3 &position, const f
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	projMatrix = Matrix4::Perspective(1.0f, 15000.0f, (float)width / (float)height, 45.0f);
-	//glDisable(GL_BLEND);
+
 	glUseProgram(0);
 }

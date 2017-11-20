@@ -12,14 +12,15 @@ Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
 
 	camera->SetPosition(Vector3(RAW_WIDTH*HEIGHTMAP_X / 2.0f, 500.0f, RAW_WIDTH*HEIGHTMAP_X));
 
-	light = new Light(Vector3((RAW_HEIGHT*HEIGHTMAP_X / 2.0f), 500.0F, (RAW_HEIGHT*HEIGHTMAP_Z / 2.0f)),
-		Vector4(0.9f, 0.9f, 1.0f, 1), (RAW_WIDTH*HEIGHTMAP_X / 2.0f) * 2);
+	light = new Light(Vector3((RAW_HEIGHT*HEIGHTMAP_X / 2.0f) - 500.0f, 1000.0F, (RAW_HEIGHT*HEIGHTMAP_Z / 2.0f)),
+		Vector4(0.9f, 0.9f, 1.0f, 1), (RAW_WIDTH*HEIGHTMAP_X / 2.0f) );
 
 	reflectShader = new Shader(SHADERDIR"PerPixelVertex.glsl", SHADERDIR"reflectFragment.glsl");
 	skyboxShader = new Shader(SHADERDIR"skyboxVertex.glsl", SHADERDIR"skyboxFragment.glsl");
 	lightShader = new Shader(SHADERDIR"PerPixelVertex.glsl", SHADERDIR"PerPixelFragment.glsl");
 	textShader = new Shader(SHADERDIR"TexturedVertex.glsl", SHADERDIR"TexturedFragment.glsl");
 	
+
 	hellData = new MD5FileData(MESHDIR"hellKnight.md5mesh");
 	hellNode = new MD5Node(*hellData);
 
@@ -109,6 +110,7 @@ void Renderer::RenderScene() {
 
 	SwapBuffers();
 }
+
 
 void Renderer::DrawSkybox() {
 	glDepthMask(GL_FALSE);
@@ -226,3 +228,5 @@ void Renderer::DrawFPS(const std::string &text, const Vector3 &position, const f
 
 	glUseProgram(0);
 }
+
+

@@ -25,7 +25,7 @@ protected:
 	Shader* sceneShader;
 	Shader* shadowShader;
 
-	GLuint shadowTex;
+	GLuint shadowMap;
 	GLuint shadowFBO;
 
 	MD5FileData* hellData;

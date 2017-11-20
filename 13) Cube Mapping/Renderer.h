@@ -25,6 +25,8 @@ protected:
 	void DrawHellKnight();
 	void DrawFPS(const std::string &text, const Vector3 &position, const float size = 10.0f);
 
+	void DrawShadowMap();
+
 	Shader * lightShader;
 	Shader * reflectShader;
 	Shader * skyboxShader;
@@ -41,7 +43,7 @@ protected:
 	Camera * camera;
 
 	GLuint cubeMap;
-	GLuint shadowTex;
+	GLuint shadowMap;
 
 	float fps = 0;
 	float recentFps[100];
