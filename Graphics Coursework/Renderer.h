@@ -11,7 +11,7 @@ public:
 
 	virtual void RenderScene();
 	virtual void UpdateScene(float msec);
-	
+
 
 protected:
 	void DrawHeightmap();
@@ -32,6 +32,6 @@ protected:
 
 	GLuint cubeMap;
 
-	Font*	basicFont;
+	//Font*	basicFont;
 	float waterRotate;
 };

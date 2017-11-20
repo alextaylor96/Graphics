@@ -209,12 +209,12 @@ void Renderer::DrawPointLights() {
 
 			sphere->Draw();
 		}
-		glCullFace(GL_BACK);
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		glClearColor(0.2f, 0.2f, 0.2f, 1);
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		//glUseProgram(0);
 	}
+	glCullFace(GL_BACK);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glClearColor(0.2f, 0.2f, 0.2f, 1);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glUseProgram(0);
 }
 
 void Renderer::CombineBuffers() {
