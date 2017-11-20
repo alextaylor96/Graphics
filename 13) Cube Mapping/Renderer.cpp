@@ -1,5 +1,5 @@
 #include "Renderer.h"
-//cube with tes/geo shader and explode with lazer with bloom effect, water with reflection, lights everywhere for multiple lights maybe fire with particles,sahdows on md5 mesh,maybe lightning
+//gem with bloom with tes/geo shader and explode with lazer with bloom effect, display next scene in corner with some blur, water with reflection, lights everywhere for multiple lights maybe fire with particles,sahdows on md5 mesh,maybe lightning
 
 Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
 	camera = new Camera();
@@ -79,6 +79,9 @@ void Renderer::UpdateScene(float msec) {
 	camera->UpdateCamera(msec);
 	viewMatrix = camera->BuildViewMatrix();
 	waterRotate += msec / 1000.0f;
+	fps = (1000/msec);
+	framesLookup = (framesLookup + 1) % 100;
+	recentFps[framesLookup] = fps;
 }
 
 void Renderer::RenderScene() {
@@ -86,7 +89,7 @@ void Renderer::RenderScene() {
 	DrawSkybox();
 	DrawHeightmap();
 	DrawWater();
-	DrawText("LOLOLOL", Vector3(0.0f, 0.0f, 0.0f), 16.0f);
+	DrawFPS("FPS: ", Vector3(0.0f, 0.0f, 0.0f), 16.0f);
 
 	SwapBuffers();
 }
@@ -140,7 +143,7 @@ void Renderer::DrawWater() {
 	glUseProgram(0);
 }
 
-void Renderer::DrawText(const std::string &text, const Vector3 &position, const float size) {
+void Renderer::DrawFPS(const std::string &text, const Vector3 &position, const float size) {
 	modelMatrix.ToIdentity();
 	textureMatrix.ToIdentity();
 
@@ -148,10 +151,12 @@ void Renderer::DrawText(const std::string &text, const Vector3 &position, const 
 
 	SetCurrentShader(textShader);
 
+	float temp = 0;
+	for (int i = 0; i < 100; ++i) {
+		temp += recentFps[i];
+	}
 	
-
-	//Create a new temporary TextMesh, using our line of text and our font
-	TextMesh* mesh = new TextMesh(text, *basicFont);
+	TextMesh* mesh = new TextMesh(text + std::to_string((int)(temp/100)), *basicFont);
 
 	
 	//glActiveTexture(GL_TEXTURE0);

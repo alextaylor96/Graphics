@@ -17,7 +17,7 @@ protected:
 	void DrawHeightmap();
 	void DrawWater();
 	void DrawSkybox();
-	void DrawText(const std::string &text, const Vector3 &position, const float size = 10.0f);
+	void DrawFPS(const std::string &text, const Vector3 &position, const float size = 10.0f);
 
 	Shader * lightShader;
 	Shader * reflectShader;
@@ -31,6 +31,10 @@ protected:
 	Camera * camera;
 
 	GLuint cubeMap;
+
+	float fps = 0;
+	float recentFps[100];
+	int framesLookup = 0;
 
 	Font*	basicFont;
 	float waterRotate;

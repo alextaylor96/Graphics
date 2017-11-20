@@ -77,8 +77,8 @@ void Renderer::RenderScene()	{
 	glUniform1i(glGetUniformLocation(currentShader->GetProgram(), "diffuseTex"), 0);
 
 //Render function to encapsulate our font rendering!
-	DrawText("This is orthographic text!", Vector3(0,0,0), 16.0f);
-	DrawText("This is perspective text!!!!", Vector3(0,0,-1000), 64.0f, true);
+	DrawFPS("This is orthographic text!", Vector3(0,0,0), 16.0f);
+	DrawFPS("This is perspective text!!!!", Vector3(0,0,-1000), 64.0f, true);
 
 	glUseProgram(0);	//That's everything!
 
@@ -90,7 +90,7 @@ Draw a line of text on screen. If we were to have a 'static' line of text, we'd
 probably want to keep the TextMesh around to save processing it every frame, 
 but for a simple demonstration, this is fine...
 */
-void Renderer::DrawText(const std::string &text, const Vector3 &position, const float size, const bool perspective)	{
+void Renderer::DrawFPS(const std::string &text, const Vector3 &position, const float size, const bool perspective)	{
 	//Create a new temporary TextMesh, using our line of text and our font
 	TextMesh* mesh = new TextMesh(text,*basicFont);
 

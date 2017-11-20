@@ -17,7 +17,7 @@ protected:
 	void DrawHeightmap();
 	void DrawWater();
 	void DrawSkybox();
-	void DrawText(const std::string &text, const Vector3 &position, const float size = 10.0f);
+	void DrawFPS(const std::string &text, const Vector3 &position, const float size = 10.0f);
 
 	Shader * lightShader;
 	Shader * reflectShader;

@@ -86,7 +86,7 @@ void Renderer::RenderScene() {
 	DrawSkybox();
 	DrawHeightmap();
 	DrawWater();
-	DrawText("LOLOLOL", Vector3(0.0f, 0.0f, 0.0f), 16.0f);
+	DrawFPS("LOLOLOL", Vector3(0.0f, 0.0f, 0.0f), 16.0f);
 
 	SwapBuffers();
 }
@@ -140,7 +140,7 @@ void Renderer::DrawWater() {
 	glUseProgram(0);
 }
 
-void Renderer::DrawText(const std::string &text, const Vector3 &position, const float size) {
+void Renderer::DrawFPS(const std::string &text, const Vector3 &position, const float size) {
 	modelMatrix.ToIdentity();
 	textureMatrix.ToIdentity();
 
