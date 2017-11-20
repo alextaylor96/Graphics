@@ -33,6 +33,6 @@ protected:
 	HeightMap * heightMap;
 	GLuint bufferFBO;
 	GLuint processFBO;
-	GLuint bufferColourTex[2];
-	GLuint bufferDepthTex;
+	GLuint subSceneColour[2];
+	GLuint subSceneDepth;
 };

@@ -58,16 +58,16 @@ Renderer::Renderer(Window &parent) :OGLRenderer(parent) {
 	buffers[0] = GL_COLOR_ATTACHMENT0;
 	buffers[1] = GL_COLOR_ATTACHMENT1;
 
-	GenerateScreenTexture(bufferDepthTex, true);
-	GenerateScreenTexture(bufferColourTex);
+	GenerateScreenTexture(subSceneDepth, true);
+	GenerateScreenTexture(subSceneColour);
 	GenerateScreenTexture(bufferNormalTex);
 	GenerateScreenTexture(lightEmissiveTex);
 	GenerateScreenTexture(lightSpecularTex);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, bufferFBO);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, bufferColourTex, 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, subSceneColour, 0);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, bufferNormalTex, 0);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT , GL_TEXTURE_2D, bufferDepthTex, 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT , GL_TEXTURE_2D, subSceneDepth, 0);
 	glDrawBuffers(2, buffers);
 
 	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
@@ -102,9 +102,9 @@ Renderer::~Renderer(void) {
 	delete quad;
 	delete[] pointLights;
 
-	glDeleteTextures(1, &bufferColourTex);
+	glDeleteTextures(1, &subSceneColour);
 	glDeleteTextures(1, &bufferNormalTex);
-	glDeleteTextures(1, &bufferDepthTex);
+	glDeleteTextures(1, &subSceneDepth);
 	glDeleteTextures(1, &lightEmissiveTex);
 	glDeleteTextures(1, &lightSpecularTex);
 
@@ -179,7 +179,7 @@ void Renderer::DrawPointLights() {
 	glUniform1i(glGetUniformLocation(currentShader->GetProgram(), "normTex"), 4);
 	
 	glActiveTexture(GL_TEXTURE3);
-	glBindTexture(GL_TEXTURE_2D, bufferDepthTex);
+	glBindTexture(GL_TEXTURE_2D, subSceneDepth);
 
 	glActiveTexture(GL_TEXTURE4);
 	glBindTexture(GL_TEXTURE_2D, bufferNormalTex);
@@ -236,7 +236,7 @@ void Renderer::CombineBuffers() {
 	glUniform1i(glGetUniformLocation(currentShader->GetProgram(), "specularTex"), 4);
 
 	glActiveTexture(GL_TEXTURE2);
-	glBindTexture(GL_TEXTURE_2D, bufferColourTex);
+	glBindTexture(GL_TEXTURE_2D, subSceneColour);
 
 	glActiveTexture(GL_TEXTURE3);
 	glBindTexture(GL_TEXTURE_2D, lightEmissiveTex);

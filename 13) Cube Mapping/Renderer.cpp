@@ -78,6 +78,41 @@ Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
 	SetTextureRepeating(heightMap->GetTexture(), true);
 	SetTextureRepeating(heightMap->GetBumpMap(), true);
 
+	//create fbo to render none main scene into
+	glGenTextures(1, &subSceneDepth);
+	glBindTexture(GL_TEXTURE_2D, subSceneDepth);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8, width, height,
+		0, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, NULL);
+
+	glGenTextures(1, &subSceneColour);
+	glBindTexture(GL_TEXTURE_2D, subSceneColour);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0,
+		GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+
+	
+	glGenFramebuffers(1, &subSceneFBO);
+	
+
+	glBindFramebuffer(GL_FRAMEBUFFER, subSceneFBO);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
+		GL_TEXTURE_2D, subSceneDepth, 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT,
+		GL_TEXTURE_2D, subSceneDepth, 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+		GL_TEXTURE_2D, subSceneColour, 0);
+	
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) !=	GL_FRAMEBUFFER_COMPLETE || !subSceneDepth || !subSceneColour) {
+		return;
+	}
+
 	//fbo used in shadow mapping
 	glGenTextures(1, &shadowMap);
 	glBindTexture(GL_TEXTURE_2D, shadowMap);
@@ -96,27 +131,6 @@ Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
 	glDrawBuffer(GL_NONE);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-	//create fbo to render none main scene into
-	glGenTextures(1, &subSceneTex);
-	glBindTexture(GL_TEXTURE_2D, subSceneTex);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOWSIZE, SHADOWSIZE, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_R_TO_TEXTURE);
-	glBindTexture(GL_TEXTURE_2D, 0);
-
-	glGenFramebuffers(1, &subSceneFBO);
-
-	glBindFramebuffer(GL_FRAMEBUFFER, subSceneFBO);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, subSceneTex, 0);
-	glDrawBuffer(GL_NONE);
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE){
-		return ;
-    }
 
 	floor = Mesh::GenerateQuad();
 	floor->SetTexture(SOIL_load_OGL_texture(TEXTUREDIR"brick.tga", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS));
@@ -180,6 +194,7 @@ void Renderer::changeScene(int changeTo)
 }
 
 void Renderer::RenderScene() {
+	DrawSubScene();
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 
 	if (currentScene == 1) {
@@ -194,24 +209,38 @@ void Renderer::RenderScene() {
 		DrawCombinedScene();
 		DrawFPS("FPS: ", Vector3(0.0f, 0.0f, 0.0f), 16.0f);
 	}
+
 	SwapBuffers();
 }
 
 void Renderer::DrawSubScene() {
 	glBindFramebuffer(GL_FRAMEBUFFER, subSceneFBO);
+	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+	
+
 	if (currentScene == 2) {
 		DrawSkybox();
 		DrawHeightmap();
 		DrawWater();
 		DrawHellKnight();
-		DrawFPS("FPS: ", Vector3(0.0f, 0.0f, 0.0f), 16.0f);
 	}
 	if (currentScene == 1) {
 		DrawShadowScene();
 		DrawCombinedScene();
-		DrawFPS("FPS: ", Vector3(0.0f, 0.0f, 0.0f), 16.0f);
-	}
-	SwapBuffers();
+	}	
+	
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	SetCurrentShader(textShader);
+	projMatrix = Matrix4::Orthographic(-1, 1, 1, -1, -1, 1);
+	viewMatrix.ToIdentity();
+	UpdateShaderMatrices();
+	subscene->SetTexture(subSceneColour);
+	subscene->Draw();
+
+	projMatrix = Matrix4::Perspective(1.0f, 15000.0f, (float)width / (float)height, 45.0f);
+	glUseProgram(0);
+
 }
 
 void Renderer::DrawSkybox() {
@@ -287,7 +316,7 @@ void Renderer::DrawWater() {
 	glBindTexture(GL_TEXTURE_2D, quad->GetBumpMap());
 
 	quad->Draw();
-	glActiveTexture(0);
+	glActiveTexture(GL_TEXTURE0);
 	glUseProgram(0);
 }
 

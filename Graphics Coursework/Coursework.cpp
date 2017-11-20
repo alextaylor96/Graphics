@@ -17,7 +17,14 @@ int main() {
 	w.LockMouseToWindow(false);
 	w.ShowOSPointer(true);
 
+
 	while (w.UpdateWindow() && !Window::GetKeyboard()->KeyDown(KEYBOARD_ESCAPE)) {
+		if (Window::GetKeyboard()->KeyDown(KEYBOARD_1)) {
+			renderer.changeScene(1);
+		}
+		if (Window::GetKeyboard()->KeyDown(KEYBOARD_2)) {
+			renderer.changeScene(2);
+		}
 		renderer.UpdateScene(w.GetTimer()->GetTimedMS());
 		renderer.RenderScene();
 	}

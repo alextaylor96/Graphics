@@ -22,7 +22,9 @@ public:
 protected:
 	int currentScene = 1;
 	GLuint subSceneFBO;
-	GLuint subSceneTex;
+	GLuint subSceneDepth;
+	GLuint subSceneColour;
+
 	Mesh * subscene;
 
 	void DrawHeightmap();
