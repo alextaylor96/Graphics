@@ -158,6 +158,10 @@ void Renderer::FillBuffers() {
 	modelMatrix.ToIdentity();
 	UpdateShaderMatrices();
 
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, heightMap->GetTexture());
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, heightMap->GetBumpMap());
 	heightMap->Draw();
 
 	glUseProgram(0);
@@ -207,6 +211,10 @@ void Renderer::DrawPointLights() {
 				glCullFace(GL_BACK);
 			}
 
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, sphere->GetTexture());
+			glActiveTexture(GL_TEXTURE1);
+			glBindTexture(GL_TEXTURE_2D, sphere->GetBumpMap());
 			sphere->Draw();
 		}
 	}
@@ -236,6 +244,10 @@ void Renderer::CombineBuffers() {
 	glActiveTexture(GL_TEXTURE4);
 	glBindTexture(GL_TEXTURE_2D, lightSpecularTex);
 
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, quad->GetTexture());
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, quad->GetBumpMap());
 	quad->Draw();
 
 	glUseProgram(0);

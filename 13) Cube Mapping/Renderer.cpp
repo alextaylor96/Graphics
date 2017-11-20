@@ -1,7 +1,7 @@
 #include "Renderer.h"
 //gem with bloom with tes/geo shader and explode with lazer with bloom effect, display next scene in corner with some blur, water with reflection, lights everywhere for multiple lights maybe fire with particles,sahdows on md5 mesh,maybe lightning
 
-//add hellknight to scene
+
 //add shadows
 //fix framerate flickering
 
@@ -13,7 +13,7 @@ Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
 	camera->SetPosition(Vector3(RAW_WIDTH*HEIGHTMAP_X / 2.0f, 500.0f, RAW_WIDTH*HEIGHTMAP_X));
 
 	light = new Light(Vector3((RAW_HEIGHT*HEIGHTMAP_X / 2.0f), 500.0F, (RAW_HEIGHT*HEIGHTMAP_Z / 2.0f)),
-		Vector4(0.9f, 0.9f, 1.0f, 1), (RAW_WIDTH*HEIGHTMAP_X / 2.0f));
+		Vector4(0.9f, 0.9f, 1.0f, 1), (RAW_WIDTH*HEIGHTMAP_X / 2.0f) * 2);
 
 	reflectShader = new Shader(SHADERDIR"PerPixelVertex.glsl", SHADERDIR"reflectFragment.glsl");
 	skyboxShader = new Shader(SHADERDIR"skyboxVertex.glsl", SHADERDIR"skyboxFragment.glsl");
@@ -61,11 +61,12 @@ Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
 	if (!heightMap->GetBumpMap()) {
 		return;
 	}
+
 	SetTextureRepeating(quad->GetTexture(), true);
 	SetTextureRepeating(heightMap->GetTexture(), true);
 	SetTextureRepeating(heightMap->GetBumpMap(), true);
 
-	init = true;
+		init = true;
 	waterRotate = 0.0f;
 	projMatrix = Matrix4::Perspective(1.0f, 15000.0f, (float)width / (float)height, 45.0f);
 	glEnable(GL_DEPTH_TEST);
@@ -121,7 +122,7 @@ void Renderer::DrawHellKnight()
 {
 	SetCurrentShader(textShader);
 	modelMatrix.ToIdentity();
-	modelMatrix = Matrix4::Translation(Vector3(2000, 500, 2000));
+	modelMatrix = Matrix4::Translation(Vector3(2400, 280, 2000));
 	textureMatrix.ToIdentity();
 
 	glUniform1i(glGetUniformLocation(currentShader->GetProgram(), "diffuseTex"), 0);
@@ -129,9 +130,10 @@ void Renderer::DrawHellKnight()
 	UpdateShaderMatrices();
 
 	hellNode->Draw(*this);
-
+	
 	glUseProgram(0);
 }
+
 
 void Renderer::DrawHeightmap() {
 	SetCurrentShader(lightShader);

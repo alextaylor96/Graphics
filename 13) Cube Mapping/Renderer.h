@@ -5,6 +5,7 @@
 #include "../../nclgl/textmesh.h"
 #include "../../nclgl/MD5Mesh.h"
 #include "../../nclgl/MD5Node.h"
+#include "../../nclgl/OBJmesh.h"
 
 
 class Renderer : public OGLRenderer {
@@ -30,6 +31,7 @@ protected:
 
 	HeightMap * heightMap;
 	Mesh * quad;
+
 
 	MD5FileData* hellData;
 	MD5Node* hellNode;
