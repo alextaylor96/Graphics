@@ -1,8 +1,9 @@
 #include "Renderer.h"
 
 //Fbo to show 3 scenes at once
-//shader to use fbos as blending/bluring transition
+//shader to use fbos as blending/bluring transition while maybe waving at same time
 //make md5 mesh walk in scene 2
+//add color correct to a scene
 //bloom on gem and destroy with lazer in shader
 
 Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
@@ -242,30 +243,28 @@ void Renderer::DisplayMain()
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 	SetCurrentShader(textShader);
-	projMatrix = Matrix4::Orthographic(-1, 1, 1, -1, -1, 1) *
+	projMatrix = Matrix4::Orthographic(-1, 1, 1, -1, -1, 1)*
 		Matrix4::Translation(Vector3(-0.75f, -0.75f, 0))
 		* Matrix4::Scale(Vector3(0.25f, 0.25f, 0.25f));
 	viewMatrix.ToIdentity();
+	textureMatrix.ToIdentity();
 	UpdateShaderMatrices();
 
 	switch (currentMainScene) {
 	case 1:
-		mainscene->SetTexture(scene1FBO);
+		mainscene->SetTexture(scene1Colour);
 		break;
 	case 2:
-		mainscene->SetTexture(scene2FBO);
+		mainscene->SetTexture(scene2Colour);
 		break;
 	}
 	
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, mainscene->GetTexture());
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, mainscene->GetTexture());
-
 
 	mainscene->Draw();
 
-	projMatrix = Matrix4::Perspective(1.0f, 15000.0f, (float)width / (float)height, 45.0f);
+	//projMatrix = Matrix4::Perspective(1.0f, 15000.0f, (float)width / (float)height, 45.0f);
 	glUseProgram(0);
 	DrawFPS("FPS: ", Vector3(0.0f, 0.0f, 0.0f), 16.0f);
 
@@ -278,28 +277,27 @@ void Renderer::DisplaySub()
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	
 	SetCurrentShader(textShader);
+
 	projMatrix = Matrix4::Orthographic(-1, 1, 1, -1, -1, 1);
-	//	Matrix4::Translation(Vector3(0, 0, 0))*
-	//	Matrix4::Scale(Vector3(1.0f, 0.25f, 0.25f));
+		Matrix4::Translation(Vector3(0, 0, 0))*
+		Matrix4::Scale(Vector3(1.0f, 0.25f, 0.25f));
 		
 	viewMatrix.ToIdentity();
+	textureMatrix.ToIdentity();
 	UpdateShaderMatrices();
 
 	switch (currentMainScene) {
 	case 2:
-		subscene->SetTexture(scene1FBO);
+		subscene->SetTexture(scene1Colour);
 		break;
 	case 1:
-		subscene->SetTexture(scene2FBO);
+		subscene->SetTexture(scene2Colour);
 		break;
 	}
 
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, subscene->GetTexture());
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, subscene->GetTexture());
-
-
+	
 	subscene->Draw();
 
 	projMatrix = Matrix4::Perspective(1.0f, 15000.0f, (float)width / (float)height, 45.0f);
@@ -321,6 +319,9 @@ void Renderer::DrawScene1() {
 	light = new Light(Vector3((RAW_HEIGHT*HEIGHTMAP_X / 2.0f) - 500.0f, 1000.0F, (RAW_HEIGHT*HEIGHTMAP_Z / 2.0f)),
 		Vector4(0.9f, 0.9f, 1.0f, 1), (RAW_WIDTH*HEIGHTMAP_X / 2.0f));
 
+	
+	viewMatrix = camera->BuildViewMatrix();
+
 	DrawSkybox();
 	DrawHeightmap();
 	DrawWater();
@@ -332,14 +333,16 @@ void Renderer::DrawScene1() {
 
 void Renderer::DrawScene2() {
 
-	glBindFramebuffer(GL_FRAMEBUFFER, scene2FBO);
-	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+
 
 	camera->SetPitch(-8.0f);
 	camera->SetYaw(40.0f);
 	camera->SetPosition(Vector3(350.0f, 200.0f, 450.0f));
 	light = new Light(Vector3(-450.f, 200.0f, 280.f), Vector4(1, 1, 1, 1), 5500.0f);
 	DrawShadowScene();
+
+	glBindFramebuffer(GL_FRAMEBUFFER, scene2FBO);
+	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 	DrawCombinedScene();
 	
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
