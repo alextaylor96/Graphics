@@ -237,14 +237,17 @@ void Renderer::RenderScene() {
 	DrawScene2();
 
 	DisplayMain();
-	//DisplaySub();
+	DisplaySub();
 	
 	SwapBuffers();
 }
 
 void Renderer::DisplayMain()
 {
+	//problem here
 	glDisable(GL_DEPTH_TEST);
+
+	//doesnt bind texture properly in fbo, doesnt draw scene 1 correctly
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 	SetCurrentShader(textShader);
@@ -282,9 +285,12 @@ void Renderer::DisplaySub()
 {
 	glDisable(GL_DEPTH_TEST);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+	
 	SetCurrentShader(textShader);
-	projMatrix = Matrix4::Orthographic(-1, 1, 1, -1, -1, 1)* Matrix4::Scale(Vector3(0.25f, 0.25f, 0.25f))*Matrix4::Translation(Vector3(0.5f, 0, 0));
+	projMatrix = Matrix4::Orthographic(-1, 1, 1, -1, -1, 1);
+	//	Matrix4::Translation(Vector3(0, 0, 0))*
+	//	Matrix4::Scale(Vector3(1.0f, 0.25f, 0.25f));
+		
 	viewMatrix.ToIdentity();
 	UpdateShaderMatrices();
 
