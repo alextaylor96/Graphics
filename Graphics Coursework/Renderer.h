@@ -20,8 +20,8 @@ public:
 	void changeScene(int changeTo);
 
 protected:
-	int currentScene = 1;
-	GLuint subSceneFBO;
+	int currentMainScene = 1;
+	GLuint scene1FBO;
 	GLuint subSceneTex;
 	Mesh * subscene;
 
@@ -31,7 +31,7 @@ protected:
 	void DrawHellKnight();
 	void DrawFPS(const std::string &text, const Vector3 &position, const float size = 10.0f);
 
-	void DrawSubScene();
+	void DrawScene1();
 	Shader * lightShader;
 	Shader * reflectShader;
 	Shader * skyboxShader;

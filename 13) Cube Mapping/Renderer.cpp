@@ -9,8 +9,10 @@ Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
 	camera = new Camera();
 	heightMap = new HeightMap(TEXTUREDIR"terrain.raw");
 	quad = Mesh::GenerateQuad();
-	subscene = Mesh::GenerateQuad();
 
+	mainscene = Mesh::GenerateQuad();
+	subscene = Mesh::GenerateQuad();
+	
 	camera->SetPitch(0.0f);
 	camera->SetYaw(350.0f);
 	camera->SetPosition(Vector3(1800.0f, 280.0f, 2900.0f));
@@ -78,9 +80,9 @@ Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
 	SetTextureRepeating(heightMap->GetTexture(), true);
 	SetTextureRepeating(heightMap->GetBumpMap(), true);
 
-	//create fbo to render none main scene into
-	glGenTextures(1, &subSceneDepth);
-	glBindTexture(GL_TEXTURE_2D, subSceneDepth);
+	//create fbo to render scene 1 into
+	glGenTextures(1, &scene1Depth);
+	glBindTexture(GL_TEXTURE_2D, scene1Depth);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -88,8 +90,8 @@ Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8, width, height,
 		0, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, NULL);
 
-	glGenTextures(1, &subSceneColour);
-	glBindTexture(GL_TEXTURE_2D, subSceneColour);
+	glGenTextures(1, &scene1Colour);
+	glBindTexture(GL_TEXTURE_2D, scene1Colour);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -98,20 +100,56 @@ Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
 		GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 
 	
-	glGenFramebuffers(1, &subSceneFBO);
+	glGenFramebuffers(1, &scene1FBO);
 	
 
-	glBindFramebuffer(GL_FRAMEBUFFER, subSceneFBO);
+	glBindFramebuffer(GL_FRAMEBUFFER, scene1FBO);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
-		GL_TEXTURE_2D, subSceneDepth, 0);
+		GL_TEXTURE_2D, scene1Depth, 0);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT,
-		GL_TEXTURE_2D, subSceneDepth, 0);
+		GL_TEXTURE_2D, scene1Depth, 0);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-		GL_TEXTURE_2D, subSceneColour, 0);
+		GL_TEXTURE_2D, scene1Colour, 0);
 	
-	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) !=	GL_FRAMEBUFFER_COMPLETE || !subSceneDepth || !subSceneColour) {
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) !=	GL_FRAMEBUFFER_COMPLETE || !scene1Depth || !scene1Colour) {
 		return;
 	}
+
+	//create fbo to render scene 2 into
+	glGenTextures(1, &scene2Depth);
+	glBindTexture(GL_TEXTURE_2D, scene2Depth);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8, width, height,
+		0, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, NULL);
+
+	glGenTextures(1, &scene2Colour);
+	glBindTexture(GL_TEXTURE_2D, scene2Colour);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0,
+		GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+
+
+	glGenFramebuffers(1, &scene2FBO);
+
+
+	glBindFramebuffer(GL_FRAMEBUFFER, scene2FBO);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
+		GL_TEXTURE_2D, scene2Depth, 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT,
+		GL_TEXTURE_2D, scene2Depth, 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+		GL_TEXTURE_2D, scene2Colour, 0);
+
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE || !scene2Depth || !scene2Colour) {
+		return;
+	}
+
 
 	//fbo used in shadow mapping
 	glGenTextures(1, &shadowMap);
@@ -160,7 +198,8 @@ Renderer::~Renderer(void) {
 	delete sceneShader;
 	delete shadowShader;
 	delete subscene;
-	glDeleteFramebuffers(1, &subSceneFBO);
+	glDeleteFramebuffers(1, &scene1FBO);
+	glDeleteFramebuffers(1, &scene2FBO);
 	currentShader = 0;
 }
 
@@ -182,66 +221,136 @@ void Renderer::changeScene(int changeTo)
 		camera->SetPosition(Vector3(1800.0f, 280.0f, 2900.0f));
 		light = new Light(Vector3((RAW_HEIGHT*HEIGHTMAP_X / 2.0f) - 500.0f, 1000.0F, (RAW_HEIGHT*HEIGHTMAP_Z / 2.0f)),
 			Vector4(0.9f, 0.9f, 1.0f, 1), (RAW_WIDTH*HEIGHTMAP_X / 2.0f));
-		currentScene = 1;
+		currentMainScene = 1;
 	}
 	if (changeTo == 2) {
 		camera->SetPitch(-8.0f);
 		camera->SetYaw(40.0f);
 		camera->SetPosition(Vector3(350.0f, 200.0f, 450.0f));
 		light = new Light(Vector3(-450.f, 200.0f, 280.f), Vector4(1, 1, 1, 1), 5500.0f);
-		currentScene = 2;
+		currentMainScene = 2;
 	}
 }
 
 void Renderer::RenderScene() {
-	DrawSubScene();
-	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+	DrawScene1();
+	DrawScene2();
 
-	if (currentScene == 1) {
-		DrawSkybox();
-		DrawHeightmap();
-		DrawWater();
-		DrawHellKnight();
-		DrawFPS("FPS: ", Vector3(0.0f, 0.0f, 0.0f), 16.0f);
-	}
-	if (currentScene == 2) {
-		DrawShadowScene();
-		DrawCombinedScene();
-		DrawFPS("FPS: ", Vector3(0.0f, 0.0f, 0.0f), 16.0f);
-	}
-
+	DisplayMain();
+	//DisplaySub();
+	
 	SwapBuffers();
 }
 
-void Renderer::DrawSubScene() {
-	glBindFramebuffer(GL_FRAMEBUFFER, subSceneFBO);
-	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
-	
-
-	if (currentScene == 2) {
-		DrawSkybox();
-		DrawHeightmap();
-		DrawWater();
-		DrawHellKnight();
-	}
-	if (currentScene == 1) {
-		DrawShadowScene();
-		DrawCombinedScene();
-	}	
-	
+void Renderer::DisplayMain()
+{
+	glDisable(GL_DEPTH_TEST);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-	SetCurrentShader(textShader);
-	projMatrix = Matrix4::Orthographic(-1, 1, 1, -1, -1, 1);
+	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+	SetCurrentShader(sceneShader);
+	projMatrix = Matrix4::Orthographic(-1, 1, 1, -1, -1, 1) *
+		Matrix4::Translation(Vector3(-0.75f, -0.75f, 0))
+		* Matrix4::Scale(Vector3(0.25f, 0.25f, 0.25f));
 	viewMatrix.ToIdentity();
 	UpdateShaderMatrices();
-	subscene->SetTexture(subSceneColour);
+
+	switch (currentMainScene) {
+	case 1:
+		mainscene->SetTexture(scene1FBO);
+		break;
+	case 2:
+		mainscene->SetTexture(scene2FBO);
+		break;
+	}
+	
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, mainscene->GetTexture());
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, mainscene->GetTexture());
+
+
+	mainscene->Draw();
+
+	projMatrix = Matrix4::Perspective(1.0f, 15000.0f, (float)width / (float)height, 45.0f);
+	glUseProgram(0);
+	DrawFPS("FPS: ", Vector3(0.0f, 0.0f, 0.0f), 16.0f);
+
+	glEnable(GL_DEPTH_TEST);
+}
+
+void Renderer::DisplaySub()
+{
+	glDisable(GL_DEPTH_TEST);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+	SetCurrentShader(sceneShader);
+	projMatrix = Matrix4::Orthographic(-1, 1, 1, -1, -1, 1)* Matrix4::Scale(Vector3(0.25f, 0.25f, 0.25f))*Matrix4::Translation(Vector3(0.5f, 0, 0));
+	viewMatrix.ToIdentity();
+	UpdateShaderMatrices();
+
+	switch (currentMainScene) {
+	case 2:
+		subscene->SetTexture(scene1FBO);
+		break;
+	case 1:
+		subscene->SetTexture(scene2FBO);
+		break;
+	}
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, subscene->GetTexture());
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, subscene->GetTexture());
+
+
 	subscene->Draw();
 
 	projMatrix = Matrix4::Perspective(1.0f, 15000.0f, (float)width / (float)height, 45.0f);
 	glUseProgram(0);
 
+
+	glEnable(GL_DEPTH_TEST);
 }
+
+void Renderer::DrawScene1() {
+	glBindFramebuffer(GL_FRAMEBUFFER, scene1FBO);
+
+	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+
+	camera->SetPitch(0.0f);
+	camera->SetYaw(350.0f);
+	camera->SetPosition(Vector3(1800.0f, 280.0f, 2900.0f));
+
+	light = new Light(Vector3((RAW_HEIGHT*HEIGHTMAP_X / 2.0f) - 500.0f, 1000.0F, (RAW_HEIGHT*HEIGHTMAP_Z / 2.0f)),
+		Vector4(0.9f, 0.9f, 1.0f, 1), (RAW_WIDTH*HEIGHTMAP_X / 2.0f));
+
+	DrawSkybox();
+	DrawHeightmap();
+	DrawWater();
+	DrawHellKnight();
+
+	glUseProgram(0);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+void Renderer::DrawScene2() {
+
+	glBindFramebuffer(GL_FRAMEBUFFER, scene2FBO);
+	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+
+	camera->SetPitch(-8.0f);
+	camera->SetYaw(40.0f);
+	camera->SetPosition(Vector3(350.0f, 200.0f, 450.0f));
+	light = new Light(Vector3(-450.f, 200.0f, 280.f), Vector4(1, 1, 1, 1), 5500.0f);
+	DrawShadowScene();
+	DrawCombinedScene();
+	
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	glUseProgram(0);
+}
+
 
 void Renderer::DrawSkybox() {
 	glDepthMask(GL_FALSE);
@@ -267,7 +376,6 @@ void Renderer::DrawHellKnight()
 	
 	glUseProgram(0);
 }
-
 
 void Renderer::DrawHeightmap() {
 	SetCurrentShader(lightShader);

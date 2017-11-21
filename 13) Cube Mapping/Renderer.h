@@ -20,20 +20,29 @@ public:
 	void changeScene(int changeTo);
 
 protected:
-	int currentScene = 1;
-	GLuint subSceneFBO;
-	GLuint subSceneDepth;
-	GLuint subSceneColour;
+	int currentMainScene = 1;
+	GLuint scene1FBO;
+	GLuint scene1Depth;
+	GLuint scene1Colour;
 
+	GLuint scene2FBO;
+	GLuint scene2Depth;
+	GLuint scene2Colour;
+
+	Mesh * mainscene;
 	Mesh * subscene;
 
+	void DisplayMain();
+    void DisplaySub();
 	void DrawHeightmap();
 	void DrawWater();
 	void DrawSkybox();
 	void DrawHellKnight();
 	void DrawFPS(const std::string &text, const Vector3 &position, const float size = 10.0f);
 
-	void DrawSubScene();
+	void DrawScene1();
+	void DrawScene2();
+
 	Shader * lightShader;
 	Shader * reflectShader;
 	Shader * skyboxShader;

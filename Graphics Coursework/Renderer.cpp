@@ -107,9 +107,9 @@ Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_R_TO_TEXTURE);
 	glBindTexture(GL_TEXTURE_2D, 0);
 
-	glGenFramebuffers(1, &subSceneFBO);
+	glGenFramebuffers(1, &scene1FBO);
 
-	glBindFramebuffer(GL_FRAMEBUFFER, subSceneFBO);
+	glBindFramebuffer(GL_FRAMEBUFFER, scene1FBO);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, subSceneTex, 0);
 	glDrawBuffer(GL_NONE);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -146,7 +146,7 @@ Renderer::~Renderer(void) {
 	delete sceneShader;
 	delete shadowShader;
 	delete subscene;
-	glDeleteFramebuffers(1, &subSceneFBO);
+	glDeleteFramebuffers(1, &scene1FBO);
 	currentShader = 0;
 }
 
@@ -168,28 +168,28 @@ void Renderer::changeScene(int changeTo)
 		camera->SetPosition(Vector3(1800.0f, 280.0f, 2900.0f));
 		light = new Light(Vector3((RAW_HEIGHT*HEIGHTMAP_X / 2.0f) - 500.0f, 1000.0F, (RAW_HEIGHT*HEIGHTMAP_Z / 2.0f)),
 			Vector4(0.9f, 0.9f, 1.0f, 1), (RAW_WIDTH*HEIGHTMAP_X / 2.0f));
-		currentScene = 1;
+		currentMainScene = 1;
 	}
 	if (changeTo == 2) {
 		camera->SetPitch(-8.0f);
 		camera->SetYaw(40.0f);
 		camera->SetPosition(Vector3(350.0f, 200.0f, 450.0f));
 		light = new Light(Vector3(-450.f, 200.0f, 280.f), Vector4(1, 1, 1, 1), 5500.0f);
-		currentScene = 2;
+		currentMainScene = 2;
 	}
 }
 
 void Renderer::RenderScene() {
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 
-	if (currentScene == 1) {
+	if (currentMainScene == 1) {
 		DrawSkybox();
 		DrawHeightmap();
 		DrawWater();
 		DrawHellKnight();
 		DrawFPS("FPS: ", Vector3(0.0f, 0.0f, 0.0f), 16.0f);
 	}
-	if (currentScene == 2) {
+	if (currentMainScene == 2) {
 		DrawShadowScene();
 		DrawCombinedScene();
 		DrawFPS("FPS: ", Vector3(0.0f, 0.0f, 0.0f), 16.0f);
@@ -197,20 +197,20 @@ void Renderer::RenderScene() {
 	SwapBuffers();
 }
 
-void Renderer::DrawSubScene() {
+void Renderer::DrawScene1() {
 
-	glBindFramebuffer(GL_FRAMEBUFFER, subSceneFBO);
+	glBindFramebuffer(GL_FRAMEBUFFER, scene1FBO);
 
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
-	if (currentScene == 2) {
+	if (currentMainScene == 2) {
 		DrawSkybox();
 		DrawHeightmap();
 		DrawWater();
 		DrawHellKnight();
 		DrawFPS("FPS: ", Vector3(0.0f, 0.0f, 0.0f), 16.0f);
 	}
-	if (currentScene == 1) {
+	if (currentMainScene == 1) {
 		DrawShadowScene();
 		DrawCombinedScene();
 		DrawFPS("FPS: ", Vector3(0.0f, 0.0f, 0.0f), 16.0f);

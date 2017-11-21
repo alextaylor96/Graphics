@@ -35,8 +35,8 @@ Renderer::Renderer(Window & parent) : OGLRenderer(parent) {
 
 	SetTextureRepeating(heightMap -> GetTexture(), true);
 	// Generate our scene depth texture ...
-	glGenTextures(1, &subSceneDepth);
-	glBindTexture(GL_TEXTURE_2D, subSceneDepth);
+	glGenTextures(1, &scene1Depth);
+	glBindTexture(GL_TEXTURE_2D, scene1Depth);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -45,8 +45,8 @@ Renderer::Renderer(Window & parent) : OGLRenderer(parent) {
 		0, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, NULL);
 	// And our colour texture ...
 	for (int i = 0; i < 2; ++i) {
-		glGenTextures(1, &subSceneColour[i]);
-		glBindTexture(GL_TEXTURE_2D, subSceneColour[i]);
+		glGenTextures(1, &scene1Colour[i]);
+		glBindTexture(GL_TEXTURE_2D, scene1Colour[i]);
 		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
 		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
 		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -60,14 +60,14 @@ Renderer::Renderer(Window & parent) : OGLRenderer(parent) {
 
 	glBindFramebuffer(GL_FRAMEBUFFER, bufferFBO);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
-		GL_TEXTURE_2D, subSceneDepth, 0);
+		GL_TEXTURE_2D, scene1Depth, 0);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT,
-		GL_TEXTURE_2D, subSceneDepth, 0);
+		GL_TEXTURE_2D, scene1Depth, 0);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-		GL_TEXTURE_2D, subSceneColour[0], 0);
+		GL_TEXTURE_2D, scene1Colour[0], 0);
 	// We can check FBO attachment success using this command !
 	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) !=
-		GL_FRAMEBUFFER_COMPLETE || !subSceneDepth || !subSceneColour[0]) {
+		GL_FRAMEBUFFER_COMPLETE || !scene1Depth || !scene1Colour[0]) {
 		return;
 
 	}
@@ -83,8 +83,8 @@ Renderer ::~Renderer(void) {
 	delete heightMap;
 	delete quad;
 	delete camera;
-	glDeleteTextures(2, subSceneColour);
-	glDeleteTextures(1, &subSceneDepth);
+	glDeleteTextures(2, scene1Colour);
+	glDeleteTextures(1, &scene1Depth);
 	glDeleteFramebuffers(1, &bufferFBO);
 	glDeleteFramebuffers(1, &processFBO);
 }
@@ -118,7 +118,7 @@ void Renderer::RenderScene() {
 void Renderer::DrawPostProcess() {
 	glBindFramebuffer(GL_FRAMEBUFFER, processFBO);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-		GL_TEXTURE_2D, subSceneColour[1], 0);
+		GL_TEXTURE_2D, scene1Colour[1], 0);
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 
 	SetCurrentShader(processShader);
@@ -132,19 +132,19 @@ void Renderer::DrawPostProcess() {
 		"pixelSize"), 1.0f / width, 1.0f / height);
 	for (int i = 0; i < POST_PASSES; ++i) {
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-			GL_TEXTURE_2D, subSceneColour[1], 0);
+			GL_TEXTURE_2D, scene1Colour[1], 0);
 		glUniform1i(glGetUniformLocation(currentShader->GetProgram(),
 			"isVertical"), 0);
 
-		quad->SetTexture(subSceneColour[0]);
+		quad->SetTexture(scene1Colour[0]);
 		quad->Draw();
 		// Now to swap the colour buffers , and do the second blur pass
 		glUniform1i(glGetUniformLocation(currentShader->GetProgram(),
 			"isVertical"), 1);
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-			GL_TEXTURE_2D, subSceneColour[0], 0);
+			GL_TEXTURE_2D, scene1Colour[0], 0);
 
-		quad->SetTexture(subSceneColour[1]);
+		quad->SetTexture(scene1Colour[1]);
 		quad->Draw();
 
 	}
@@ -158,7 +158,7 @@ void Renderer::DrawPostProcess() {
 	projMatrix = Matrix4::Orthographic(-1, 1, 1, -1, -1, 1);
 	viewMatrix.ToIdentity();
 	UpdateShaderMatrices();
-	quad->SetTexture(subSceneColour[0]);
+	quad->SetTexture(scene1Colour[0]);
 	quad->Draw();
 	glUseProgram(0);
 }

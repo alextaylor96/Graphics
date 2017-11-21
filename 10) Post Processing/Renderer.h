@@ -33,6 +33,6 @@ protected:
 	HeightMap * heightMap;
 	GLuint bufferFBO;
 	GLuint processFBO;
-	GLuint subSceneColour[2];
-	GLuint subSceneDepth;
+	GLuint scene1Colour[2];
+	GLuint scene1Depth;
 };

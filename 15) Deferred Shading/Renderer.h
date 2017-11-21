@@ -32,9 +32,9 @@ protected:
 	Camera* camera;
 	float rotation;
 	GLuint bufferFBO;
-	GLuint subSceneColour;
+	GLuint scene1Colour;
 	GLuint bufferNormalTex;
-	GLuint subSceneDepth;
+	GLuint scene1Depth;
 	GLuint pointLightFBO;
 	GLuint lightEmissiveTex;
 	GLuint lightSpecularTex;
