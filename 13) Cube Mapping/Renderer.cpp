@@ -26,7 +26,7 @@ Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
 	textShader = new Shader(SHADERDIR"TexturedVertex.glsl", SHADERDIR"TexturedFragment.glsl");
 	sceneShader = new Shader(SHADERDIR"shadowscenevert.glsl", SHADERDIR"shadowscenefrag.glsl");
 	shadowShader = new Shader(SHADERDIR"shadowVert.glsl", SHADERDIR"shadowFrag.glsl");
-
+	
 	if (!sceneShader->LinkProgram() || !shadowShader->LinkProgram()) {
 		return;
 	}
@@ -247,7 +247,7 @@ void Renderer::DisplayMain()
 	glDisable(GL_DEPTH_TEST);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
-	SetCurrentShader(sceneShader);
+	SetCurrentShader(textShader);
 	projMatrix = Matrix4::Orthographic(-1, 1, 1, -1, -1, 1) *
 		Matrix4::Translation(Vector3(-0.75f, -0.75f, 0))
 		* Matrix4::Scale(Vector3(0.25f, 0.25f, 0.25f));
@@ -283,7 +283,7 @@ void Renderer::DisplaySub()
 	glDisable(GL_DEPTH_TEST);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
-	SetCurrentShader(sceneShader);
+	SetCurrentShader(textShader);
 	projMatrix = Matrix4::Orthographic(-1, 1, 1, -1, -1, 1)* Matrix4::Scale(Vector3(0.25f, 0.25f, 0.25f))*Matrix4::Translation(Vector3(0.5f, 0, 0));
 	viewMatrix.ToIdentity();
 	UpdateShaderMatrices();
@@ -329,9 +329,8 @@ void Renderer::DrawScene1() {
 	DrawWater();
 	DrawHellKnight();
 
-	glUseProgram(0);
-
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glUseProgram(0);
 }
 
 void Renderer::DrawScene2() {
