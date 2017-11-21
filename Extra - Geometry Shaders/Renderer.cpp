@@ -47,6 +47,13 @@ void Renderer::RenderScene()	{
 	emitter->SetParticleSpeed(0.1f);
 	UpdateShaderMatrices();
 
+
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, emitter->GetTexture());
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, emitter->GetTexture());
+
 	emitter->Draw();
 
 	glUseProgram(0);

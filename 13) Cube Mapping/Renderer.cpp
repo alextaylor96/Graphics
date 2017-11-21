@@ -1,9 +1,9 @@
 #include "Renderer.h"
-//gem with bloom with tes/geo shader and explode with lazer with bloom effect, display next scene in corner with some blur, water with reflection, lights everywhere for multiple lights maybe fire with particles,sahdows on md5 mesh,maybe lightning
 
-
-//improve shadow scene
-//fix framerate flickering
+//Fbo to show 3 scenes at once
+//shader to use fbos as blending/bluring transition
+//make md5 mesh walk in scene 2
+//bloom on gem and destroy with lazer in shader
 
 Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
 	camera = new Camera();
@@ -216,18 +216,9 @@ void Renderer::UpdateScene(float msec) {
 void Renderer::changeScene(int changeTo)
 {
 	if (changeTo == 1) {
-		camera->SetPitch(0.0f);
-		camera->SetYaw(350.0f);
-		camera->SetPosition(Vector3(1800.0f, 280.0f, 2900.0f));
-		light = new Light(Vector3((RAW_HEIGHT*HEIGHTMAP_X / 2.0f) - 500.0f, 1000.0F, (RAW_HEIGHT*HEIGHTMAP_Z / 2.0f)),
-			Vector4(0.9f, 0.9f, 1.0f, 1), (RAW_WIDTH*HEIGHTMAP_X / 2.0f));
 		currentMainScene = 1;
 	}
 	if (changeTo == 2) {
-		camera->SetPitch(-8.0f);
-		camera->SetYaw(40.0f);
-		camera->SetPosition(Vector3(350.0f, 200.0f, 450.0f));
-		light = new Light(Vector3(-450.f, 200.0f, 280.f), Vector4(1, 1, 1, 1), 5500.0f);
 		currentMainScene = 2;
 	}
 }
