@@ -25,6 +25,12 @@ int main() {
 		if (Window::GetKeyboard()->KeyDown(KEYBOARD_2)) {
 			renderer.changeScene(2);
 		}
+		if (Window::GetKeyboard()->KeyDown(KEYBOARD_3)) {
+			renderer.changeScene(3);
+		}
+		if (Window::GetKeyboard()->KeyDown(KEYBOARD_SPACE)) {
+			renderer.setPaused(true);
+		}
 		renderer.UpdateScene(w.GetTimer()->GetTimedMS());
 		renderer.RenderScene();
 	}

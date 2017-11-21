@@ -19,11 +19,36 @@ public:
 
 	void changeScene(int changeTo);
 
+	void setPaused(bool setTo) {
+		paused = setTo;
+	}
+
 protected:
+	bool paused = false;
+
 	int currentMainScene = 1;
+	int currentsubScene = 2;
+
+
 	GLuint scene1FBO;
-	GLuint subSceneTex;
+	GLuint scene1Depth;
+	GLuint scene1Colour;
+
+	GLuint scene2FBO;
+	GLuint scene2Depth;
+	GLuint scene2Colour;
+
+	GLuint scene3FBO;
+	GLuint scene3Depth;
+	GLuint scene3Colour;
+
+	Mesh * mainscene;
 	Mesh * subscene;
+	Mesh * subscene2;
+
+	void DisplayMain();
+	void DisplaySub();
+
 
 	void DrawHeightmap();
 	void DrawWater();
@@ -32,6 +57,9 @@ protected:
 	void DrawFPS(const std::string &text, const Vector3 &position, const float size = 10.0f);
 
 	void DrawScene1();
+	void DrawScene2();
+	void DrawScene3();
+
 	Shader * lightShader;
 	Shader * reflectShader;
 	Shader * skyboxShader;

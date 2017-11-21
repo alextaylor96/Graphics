@@ -13,7 +13,8 @@ Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
 
 	mainscene = Mesh::GenerateQuad();
 	subscene = Mesh::GenerateQuad();
-	
+	subscene2 = Mesh::GenerateQuad();
+
 	camera->SetPitch(0.0f);
 	camera->SetYaw(350.0f);
 	camera->SetPosition(Vector3(1800.0f, 280.0f, 2900.0f));
@@ -151,6 +152,40 @@ Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
 		return;
 	}
 
+	//create fbo to render scene 3 into
+	glGenTextures(1, &scene3Depth);
+	glBindTexture(GL_TEXTURE_2D, scene3Depth);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8, width, height,
+		0, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, NULL);
+
+	glGenTextures(1, &scene3Colour);
+	glBindTexture(GL_TEXTURE_2D, scene3Colour);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0,
+		GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+
+
+	glGenFramebuffers(1, &scene3FBO);
+
+
+	glBindFramebuffer(GL_FRAMEBUFFER, scene3FBO);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
+		GL_TEXTURE_2D, scene3Depth, 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT,
+		GL_TEXTURE_2D, scene3Depth, 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+		GL_TEXTURE_2D, scene3Colour, 0);
+
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE || !scene3Depth || !scene3Colour) {
+		return;
+	}
 
 	//fbo used in shadow mapping
 	glGenTextures(1, &shadowMap);
@@ -218,34 +253,46 @@ void Renderer::changeScene(int changeTo)
 {
 	if (changeTo == 1) {
 		currentMainScene = 1;
+		currentsubScene = 2;
 	}
 	if (changeTo == 2) {
 		currentMainScene = 2;
+		currentsubScene = 3;
+	}
+	if (changeTo == 3) {
+		currentMainScene = 3;
+		currentsubScene = 1;
 	}
 }
 
 void Renderer::RenderScene() {
-	DrawScene1();
-	DrawScene2();
+	if (currentMainScene == 1 || currentsubScene == 1) {
+		DrawScene1();
+	}
+	if (currentMainScene == 2 || currentsubScene == 2) {
+		DrawScene2();
+	}
+	if (currentMainScene == 3 || currentsubScene == 3) {
+		DrawScene3();
+	}
 
 	DisplayMain();
 	DisplaySub();
+
+	DrawFPS("FPS: ", Vector3(0.0f, 0.0f, 0.0f), 16.0f);
 	
 	SwapBuffers();
 }
 
 void Renderer::DisplayMain()
 {
-	//problem here
 	glDisable(GL_DEPTH_TEST);
 
-	//doesnt bind texture properly in fbo, doesnt draw scene 1 correctly
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 	SetCurrentShader(textShader);
-	projMatrix = Matrix4::Orthographic(-1, 1, 1, -1, -1, 1)*
-		Matrix4::Translation(Vector3(-0.75f, -0.75f, 0))
-		* Matrix4::Scale(Vector3(0.25f, 0.25f, 0.25f));
+	projMatrix = Matrix4::Orthographic(-1, 1, 1, -1, -1, 1);
+
 	viewMatrix.ToIdentity();
 	textureMatrix.ToIdentity();
 	UpdateShaderMatrices();
@@ -257,6 +304,9 @@ void Renderer::DisplayMain()
 	case 2:
 		mainscene->SetTexture(scene2Colour);
 		break;
+	case 3:
+		mainscene->SetTexture(scene3Colour);
+		break;
 	}
 	
 	glActiveTexture(GL_TEXTURE0);
@@ -264,9 +314,8 @@ void Renderer::DisplayMain()
 
 	mainscene->Draw();
 
-	//projMatrix = Matrix4::Perspective(1.0f, 15000.0f, (float)width / (float)height, 45.0f);
 	glUseProgram(0);
-	DrawFPS("FPS: ", Vector3(0.0f, 0.0f, 0.0f), 16.0f);
+
 
 	glEnable(GL_DEPTH_TEST);
 }
@@ -278,20 +327,24 @@ void Renderer::DisplaySub()
 	
 	SetCurrentShader(textShader);
 
-	projMatrix = Matrix4::Orthographic(-1, 1, 1, -1, -1, 1);
-		Matrix4::Translation(Vector3(0, 0, 0))*
-		Matrix4::Scale(Vector3(1.0f, 0.25f, 0.25f));
-		
+	projMatrix = Matrix4::Orthographic(-1, 1, 1, -1, -1, 1)*
+		Matrix4::Translation(Vector3(0.75f, 0.75f, 0))
+		* Matrix4::Scale(Vector3(0.25f, 0.25f, 0.25f));
+	
 	viewMatrix.ToIdentity();
 	textureMatrix.ToIdentity();
+	modelMatrix.ToIdentity();
 	UpdateShaderMatrices();
-
-	switch (currentMainScene) {
-	case 2:
+	
+	switch (currentsubScene) {
+	case 1:
 		subscene->SetTexture(scene1Colour);
 		break;
-	case 1:
+	case 2:
 		subscene->SetTexture(scene2Colour);
+		break;
+	case 3:
+		subscene->SetTexture(scene3Colour);
 		break;
 	}
 
@@ -307,15 +360,18 @@ void Renderer::DisplaySub()
 	glEnable(GL_DEPTH_TEST);
 }
 
+
 void Renderer::DrawScene1() {
 	glBindFramebuffer(GL_FRAMEBUFFER, scene1FBO);
 
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 
-	camera->SetPitch(0.0f);
-	camera->SetYaw(350.0f);
-	camera->SetPosition(Vector3(1800.0f, 280.0f, 2900.0f));
-
+	if (!paused) {
+		camera->SetPitch(0.0f);
+		camera->SetYaw(350.0f);
+		camera->SetPosition(Vector3(1800.0f, 280.0f, 2900.0f));
+	}
+	
 	light = new Light(Vector3((RAW_HEIGHT*HEIGHTMAP_X / 2.0f) - 500.0f, 1000.0F, (RAW_HEIGHT*HEIGHTMAP_Z / 2.0f)),
 		Vector4(0.9f, 0.9f, 1.0f, 1), (RAW_WIDTH*HEIGHTMAP_X / 2.0f));
 
@@ -333,11 +389,12 @@ void Renderer::DrawScene1() {
 
 void Renderer::DrawScene2() {
 
+	if (!paused) {
+		camera->SetPitch(-8.0f);
+		camera->SetYaw(40.0f);
+		camera->SetPosition(Vector3(350.0f, 200.0f, 450.0f));
+	}
 
-
-	camera->SetPitch(-8.0f);
-	camera->SetYaw(40.0f);
-	camera->SetPosition(Vector3(350.0f, 200.0f, 450.0f));
 	light = new Light(Vector3(-450.f, 200.0f, 280.f), Vector4(1, 1, 1, 1), 5500.0f);
 	DrawShadowScene();
 
@@ -348,6 +405,27 @@ void Renderer::DrawScene2() {
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 	glUseProgram(0);
+}
+
+void Renderer::DrawScene3()
+{
+	if (!paused) {
+		camera->SetPitch(-8.0f);
+		camera->SetYaw(40.0f);
+		camera->SetPosition(Vector3(350.0f, 200.0f, 450.0f));
+	}
+
+	light = new Light(Vector3(-450.f, 200.0f, 280.f), Vector4(1, 1, 1, 1), 5500.0f);
+	DrawShadowScene();
+
+	glBindFramebuffer(GL_FRAMEBUFFER, scene3FBO);
+	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+	DrawCombinedScene();
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	glUseProgram(0);
+
 }
 
 

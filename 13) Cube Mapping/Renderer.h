@@ -19,8 +19,17 @@ public:
 
 	void changeScene(int changeTo);
 
+	void setPaused(bool setTo) {
+		paused = setTo;
+	}
+
 protected:
+	bool paused = false;
+
 	int currentMainScene = 1;
+	int currentsubScene = 2;
+	
+
 	GLuint scene1FBO;
 	GLuint scene1Depth;
 	GLuint scene1Colour;
@@ -29,11 +38,18 @@ protected:
 	GLuint scene2Depth;
 	GLuint scene2Colour;
 
+	GLuint scene3FBO;
+	GLuint scene3Depth;
+	GLuint scene3Colour;
+
 	Mesh * mainscene;
 	Mesh * subscene;
+	Mesh * subscene2;
 
 	void DisplayMain();
     void DisplaySub();
+	
+
 	void DrawHeightmap();
 	void DrawWater();
 	void DrawSkybox();
@@ -42,6 +58,7 @@ protected:
 
 	void DrawScene1();
 	void DrawScene2();
+	void DrawScene3();
 
 	Shader * lightShader;
 	Shader * reflectShader;
