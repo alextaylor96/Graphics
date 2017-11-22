@@ -3,17 +3,23 @@
 //Fbo to show 3 scenes at once
 //shader to use fbos as blending/bluring transition while maybe waving at same time
 //make md5 mesh walk in scene 2
-//add color correct to a scene
-//bloom on gem and destroy with lazer in shader
+//add color correct to a scene?
+//bloom on sphere for sun and destroy with lazer in shader
 
 Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
 	camera = new Camera();
 	heightMap = new HeightMap(TEXTUREDIR"terrain.raw");
 	quad = Mesh::GenerateQuad();
+	screen = Mesh::GenerateQuad();
+
+	sun = new OBJMesh();
+	if (!sun->LoadOBJMesh(MESHDIR"cube.obj")) {
+		return;
+	}
+	sun->SetTexture(SOIL_load_OGL_texture(TEXTUREDIR"sand.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS));
 
 	mainscene = Mesh::GenerateQuad();
 	subscene = Mesh::GenerateQuad();
-	subscene2 = Mesh::GenerateQuad();
 
 	camera->SetPitch(0.0f);
 	camera->SetYaw(350.0f);
@@ -25,11 +31,16 @@ Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
 	reflectShader = new Shader(SHADERDIR"PerPixelVertex.glsl", SHADERDIR"reflectFragment.glsl");
 	skyboxShader = new Shader(SHADERDIR"skyboxVertex.glsl", SHADERDIR"skyboxFragment.glsl");
 	lightShader = new Shader(SHADERDIR"BumpVertex.glsl", SHADERDIR"BumpFragment.glsl");
-	textShader = new Shader(SHADERDIR"TexturedVertex.glsl", SHADERDIR"TexturedFragment.glsl");
+	textureShader = new Shader(SHADERDIR"TexturedVertex.glsl", SHADERDIR"TexturedFragment.glsl");
 	sceneShader = new Shader(SHADERDIR"shadowscenevert.glsl", SHADERDIR"shadowscenefrag.glsl");
 	shadowShader = new Shader(SHADERDIR"shadowVert.glsl", SHADERDIR"shadowFrag.glsl");
+	sunShader = new Shader(SHADERDIR"sunVertex.glsl", SHADERDIR"sunFragment.glsl");
 
 	if (!sceneShader->LinkProgram() || !shadowShader->LinkProgram()) {
+		return;
+	}
+
+	if (!sunShader->LinkProgram() || !sunShader->LinkProgram()) {
 		return;
 	}
 
@@ -49,7 +60,7 @@ Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
 	if (!lightShader->LinkProgram()) {
 		return;
 	}
-	if (!textShader->LinkProgram()) {
+	if (!textureShader->LinkProgram()) {
 		return;
 	}
 
@@ -58,13 +69,13 @@ Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
 	heightMap->SetBumpMap(SOIL_load_OGL_texture(TEXTUREDIR"sandbump.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS));
 
 
-	cubeMap = SOIL_load_OGL_cubemap(TEXTUREDIR"rusted_west.jpg", TEXTUREDIR"rusted_east.jpg", TEXTUREDIR"rusted_up.jpg",
+	skybox = SOIL_load_OGL_cubemap(TEXTUREDIR"rusted_west.jpg", TEXTUREDIR"rusted_east.jpg", TEXTUREDIR"rusted_up.jpg",
 		TEXTUREDIR"rusted_down.jpg", TEXTUREDIR"rusted_south.jpg", TEXTUREDIR"rusted_north.jpg",
 		SOIL_LOAD_RGB, SOIL_CREATE_NEW_ID, 0);
 
 	basicFont = new Font(SOIL_load_OGL_texture(TEXTUREDIR"tahoma.tga", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_COMPRESS_TO_DXT), 16, 16);
 
-	if (!cubeMap) {
+	if (!skybox) {
 		return;
 	}
 	if (!quad->GetTexture()) {
@@ -81,6 +92,41 @@ Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
 	SetTextureRepeating(quad->GetTexture(), true);
 	SetTextureRepeating(heightMap->GetTexture(), true);
 	SetTextureRepeating(heightMap->GetBumpMap(), true);
+
+	//create fbo to render image for the screen into
+	glGenTextures(1, &screenDepth);
+	glBindTexture(GL_TEXTURE_2D, screenDepth);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8, width, height,
+		0, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, NULL);
+
+	glGenTextures(1, &screenColour);
+	glBindTexture(GL_TEXTURE_2D, screenColour);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0,
+		GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+
+
+	glGenFramebuffers(1, &screenFBO);
+
+
+	glBindFramebuffer(GL_FRAMEBUFFER, screenFBO);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
+		GL_TEXTURE_2D, screenDepth, 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT,
+		GL_TEXTURE_2D, screenDepth, 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+		GL_TEXTURE_2D, screenColour, 0);
+
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE || !screenDepth || !screenColour) {
+		return;
+	}
 
 	//create fbo to render scene 1 into
 	glGenTextures(1, &scene1Depth);
@@ -236,6 +282,7 @@ Renderer::~Renderer(void) {
 	delete subscene;
 	glDeleteFramebuffers(1, &scene1FBO);
 	glDeleteFramebuffers(1, &scene2FBO);
+	glDeleteFramebuffers(1, &scene3FBO);
 	currentShader = 0;
 }
 
@@ -254,6 +301,7 @@ void Renderer::changeScene(int changeTo)
 	if (changeTo == 1) {
 		currentMainScene = 1;
 		currentsubScene = 2;
+
 	}
 	if (changeTo == 2) {
 		currentMainScene = 2;
@@ -276,21 +324,25 @@ void Renderer::RenderScene() {
 		DrawScene3();
 	}
 
-	DisplayMain();
-	DisplaySub();
+	//draws the main and sub scenes to correct place on screen buffer
+	DrawMainScene();
+	DrawSubScene();
+	//displays the screen buffer
+	DrawScreen();
 
 	DrawFPS("FPS: ", Vector3(0.0f, 0.0f, 0.0f), 16.0f);
+
 
 	SwapBuffers();
 }
 
-void Renderer::DisplayMain()
+void Renderer::DrawMainScene()
 {
 	glDisable(GL_DEPTH_TEST);
 
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glBindFramebuffer(GL_FRAMEBUFFER, screenFBO);
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
-	SetCurrentShader(textShader);
+	SetCurrentShader(textureShader);
 	projMatrix = Matrix4::Orthographic(-1, 1, 1, -1, -1, 1);
 
 	viewMatrix.ToIdentity();
@@ -320,12 +372,12 @@ void Renderer::DisplayMain()
 	glEnable(GL_DEPTH_TEST);
 }
 
-void Renderer::DisplaySub()
+void Renderer::DrawSubScene()
 {
 	glDisable(GL_DEPTH_TEST);
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glBindFramebuffer(GL_FRAMEBUFFER, screenFBO);
 
-	SetCurrentShader(textShader);
+	SetCurrentShader(textureShader);
 
 	projMatrix = Matrix4::Orthographic(-1, 1, 1, -1, -1, 1)*
 		Matrix4::Translation(Vector3(0.75f, 0.75f, 0))
@@ -356,6 +408,32 @@ void Renderer::DisplaySub()
 	projMatrix = Matrix4::Perspective(1.0f, 15000.0f, (float)width / (float)height, 45.0f);
 	glUseProgram(0);
 
+
+	glEnable(GL_DEPTH_TEST);
+}
+
+void Renderer::DrawScreen()
+{
+	glDisable(GL_DEPTH_TEST);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+	SetCurrentShader(textureShader);
+	projMatrix = Matrix4::Orthographic(-1, 1, 1, -1, -1, 1);
+
+	viewMatrix.ToIdentity();
+	textureMatrix.ToIdentity();
+	UpdateShaderMatrices();
+
+	screen->SetTexture(screenColour);
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, screen->GetTexture());
+
+
+	screen->Draw();
+
+	glUseProgram(0);
 
 	glEnable(GL_DEPTH_TEST);
 }
@@ -416,11 +494,11 @@ void Renderer::DrawScene3()
 	}
 
 	light = new Light(Vector3(-450.f, 200.0f, 280.f), Vector4(1, 1, 1, 1), 5500.0f);
-	DrawShadowScene();
 
 	glBindFramebuffer(GL_FRAMEBUFFER, scene3FBO);
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
-	DrawCombinedScene();
+
+	DrawSun();
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
@@ -440,7 +518,7 @@ void Renderer::DrawSkybox() {
 
 void Renderer::DrawHellKnight()
 {
-	SetCurrentShader(textShader);
+	SetCurrentShader(textureShader);
 	modelMatrix.ToIdentity();
 	modelMatrix = Matrix4::Translation(Vector3(2400, 280, 2000));
 	textureMatrix.ToIdentity();
@@ -483,7 +561,7 @@ void Renderer::DrawWater() {
 	glUniform1i(glGetUniformLocation(currentShader->GetProgram(), "diffuseTex"), 0);
 	glUniform1i(glGetUniformLocation(currentShader->GetProgram(), "cubeTex"), 2);
 	glActiveTexture(GL_TEXTURE2);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, cubeMap);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, skybox);
 	float heightX = (RAW_WIDTH*HEIGHTMAP_X / 2.0f);
 	float heightY = 256 * HEIGHTMAP_Y / 3.0f;
 	float heightZ = (RAW_HEIGHT * HEIGHTMAP_Z / 2.0f);
@@ -511,7 +589,7 @@ void Renderer::DrawFPS(const std::string &text, const Vector3 &position, const f
 
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 
-	SetCurrentShader(textShader);
+	SetCurrentShader(textureShader);
 
 	float temp = 0;
 	for (int i = 0; i < 100; ++i) {
@@ -617,4 +695,24 @@ void Renderer::DrawFloor() {
 	glBindTexture(GL_TEXTURE_2D, floor->GetBumpMap());
 
 	floor->Draw();
+}
+
+void Renderer::DrawSun()
+{
+	SetCurrentShader(sunShader);
+
+	modelMatrix.ToIdentity();
+	modelMatrix = Matrix4::Translation(Vector3(2400, 280, 2000))*Matrix4::Scale(Vector3(100, 100, 100));
+	textureMatrix.ToIdentity();
+
+	glUniform1i(glGetUniformLocation(currentShader->GetProgram(), "diffuseTex"), 0);
+
+	UpdateShaderMatrices();
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, sun->GetTexture());
+
+	sun->Draw();
+
+	glUseProgram(0);
 }

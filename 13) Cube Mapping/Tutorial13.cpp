@@ -21,12 +21,15 @@ int main() {
 	while (w.UpdateWindow() && !Window::GetKeyboard()->KeyDown(KEYBOARD_ESCAPE)) {
 		if (Window::GetKeyboard()->KeyDown(KEYBOARD_1)) {
 			renderer.changeScene(1);
+			renderer.setPaused(false);
 		}
 		if (Window::GetKeyboard()->KeyDown(KEYBOARD_2)) {
 			renderer.changeScene(2);
+			renderer.setPaused(false);
 		}
 		if (Window::GetKeyboard()->KeyDown(KEYBOARD_3)) {
 			renderer.changeScene(3);
+			renderer.setPaused(false);
 		}
 		if (Window::GetKeyboard()->KeyDown(KEYBOARD_SPACE)) {
 			renderer.setPaused(true);

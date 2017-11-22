@@ -25,10 +25,14 @@ public:
 
 protected:
 	bool paused = false;
+	bool transitioning = false;
 
 	int currentMainScene = 1;
 	int currentsubScene = 2;
 	
+	GLuint screenFBO;
+	GLuint screenDepth;
+	GLuint screenColour;
 
 	GLuint scene1FBO;
 	GLuint scene1Depth;
@@ -42,12 +46,18 @@ protected:
 	GLuint scene3Depth;
 	GLuint scene3Colour;
 
+	GLuint scenePostFBO;
+	GLuint scenePostDepth;
+	GLuint scenePostColour;
+
+	Mesh * screen;
 	Mesh * mainscene;
 	Mesh * subscene;
-	Mesh * subscene2;
+	
+	void DrawMainScene();
+    void DrawSubScene();
 
-	void DisplayMain();
-    void DisplaySub();
+	void DrawScreen();
 	
 
 	void DrawHeightmap();
@@ -63,19 +73,20 @@ protected:
 	Shader * lightShader;
 	Shader * reflectShader;
 	Shader * skyboxShader;
-	Shader* textShader;
+	Shader* textureShader;
 
 
 	HeightMap * heightMap;
 	Mesh * quad;
 
+	OBJMesh* sun;
 
 	MD5FileData* hellData;
 	MD5Node* hellNode;
 	Light * light;
 	Camera * camera;
 
-	GLuint cubeMap;
+	GLuint skybox;
 
 	float fps = 0;
 	float recentFps[100];
@@ -86,11 +97,14 @@ protected:
 
 	void DrawMesh();
 	void DrawFloor();
+	void DrawSun();
 	void DrawShadowScene();
 	void DrawCombinedScene();
 
 	Shader* sceneShader;
 	Shader* shadowShader;
+
+	Shader* sunShader;
 
 	GLuint shadowMap;
 	GLuint shadowFBO;
