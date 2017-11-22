@@ -97,7 +97,7 @@ protected:
 
 	void DrawMesh();
 	void DrawFloor();
-	void DrawSun();
+	void DrawPlanet();
 	void DrawShadowScene();
 	void DrawCombinedScene();
 

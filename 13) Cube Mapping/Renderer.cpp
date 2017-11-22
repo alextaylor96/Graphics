@@ -307,6 +307,10 @@ Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
 	glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 
 
+	for (int i = 0; i < 100; ++i) {
+		recentFps[i] = 60;
+	}
+
 	init = true;
 }
 
@@ -337,6 +341,8 @@ void Renderer::UpdateScene(float msec) {
 	fps = (1000/msec);
 	framesLookup = (framesLookup + 1) % 100;
 	recentFps[framesLookup] = fps;
+
+	offset = msec / 1000.0 * 2 * 3.14159 * .75;
 }
 
 void Renderer::changeScene(int changeTo)
@@ -357,6 +363,12 @@ void Renderer::changeScene(int changeTo)
 }
 
 void Renderer::RenderScene() {
+
+	glBindFramebuffer(GL_FRAMEBUFFER, screenFBO);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+		GL_TEXTURE_2D, screenColour, 0);
+
+
 	if (currentMainScene == 1 || currentsubScene == 1) {
 		DrawScene1();
 	}
@@ -392,6 +404,7 @@ void Renderer::DrawMainScene()
 	SetCurrentShader(textureShader);
 	projMatrix = Matrix4::Orthographic(-1, 1, 1, -1, -1, 1);
 
+	modelMatrix.ToIdentity();
 	viewMatrix.ToIdentity();
 	textureMatrix.ToIdentity();
 	UpdateShaderMatrices();
@@ -486,11 +499,15 @@ void Renderer::DisplayScreen()
 	glEnable(GL_DEPTH_TEST);
 }
 
+//problem with shader and with the 3rd scene being made after 1st
 void Renderer::postProcessTransition()
 {
 	glDisable(GL_DEPTH_TEST);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, postFBO);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+		GL_TEXTURE_2D, postColour, 0);
+
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 	SetCurrentShader(transitionShader);
 	projMatrix = Matrix4::Orthographic(-1, 1, 1, -1, -1, 1);
@@ -499,22 +516,24 @@ void Renderer::postProcessTransition()
 	textureMatrix.ToIdentity();
 	UpdateShaderMatrices();
 
-	screen->SetTexture(screenColour);
+	//screen->SetTexture(screenColour);
 
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, screen->GetTexture());
+	glActiveTexture(GL_TEXTURE13);
+	glBindTexture(GL_TEXTURE_2D, screenColour);
+
+	glUniform1i(glGetUniformLocation(currentShader->GetProgram(), "diffuseTex"), 13);
 
 	glUniform1f(glGetUniformLocation(currentShader->GetProgram(), "offset"), offset);
 
 
-	//draw screen with post processing effect
+	//draw screen with post processing effect shader
 	screen->Draw();
 
 	glUseProgram(0);
 
 	//set the screen color to be the result of the post process
-	screenColour = postColour;
-	++offset;
+	//screenColour = postColour;
+	std::swap(screenColour, postColour);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glEnable(GL_DEPTH_TEST);
@@ -574,6 +593,7 @@ void Renderer::DrawScene3()
 		camera->SetYaw(40.0f);
 		camera->SetPosition(Vector3(350.0f, 200.0f, 450.0f));
 	}
+	viewMatrix = camera->BuildViewMatrix();
 
 	light = new Light(Vector3(-450.f, 200.0f, 280.f), Vector4(1, 1, 1, 1), 5500.0f);
 
@@ -581,7 +601,7 @@ void Renderer::DrawScene3()
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 
 	DrawSpaceBox();
-	DrawSun();
+	DrawPlanet();
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
@@ -795,7 +815,7 @@ void Renderer::DrawFloor() {
 	floor->Draw();
 }
 
-void Renderer::DrawSun()
+void Renderer::DrawPlanet()
 {
 	SetCurrentShader(sunShader);
 

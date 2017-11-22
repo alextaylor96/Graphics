@@ -498,7 +498,7 @@ void Renderer::DrawScene3()
 	glBindFramebuffer(GL_FRAMEBUFFER, scene3FBO);
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 
-	DrawSun();
+	DrawPlanet();
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
@@ -697,7 +697,7 @@ void Renderer::DrawFloor() {
 	floor->Draw();
 }
 
-void Renderer::DrawSun()
+void Renderer::DrawPlanet()
 {
 	SetCurrentShader(sunShader);
 

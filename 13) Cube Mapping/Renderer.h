@@ -104,7 +104,7 @@ protected:
 
 	void DrawMesh();
 	void DrawFloor();
-	void DrawSun();
+	void DrawPlanet();
 	void DrawSpaceBox();
 	void DrawShadowScene();
 	void DrawCombinedScene();
