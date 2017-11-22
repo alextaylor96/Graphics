@@ -25,7 +25,8 @@ public:
 
 protected:
 	bool paused = false;
-	bool transitioning = false;
+	bool transitioning = true;
+	int offset = 0;
 
 	int currentMainScene = 1;
 	int currentsubScene = 2;
@@ -33,6 +34,10 @@ protected:
 	GLuint screenFBO;
 	GLuint screenDepth;
 	GLuint screenColour;
+
+	GLuint postFBO;
+	GLuint postDepth;
+	GLuint postColour;
 
 	GLuint scene1FBO;
 	GLuint scene1Depth;
@@ -57,8 +62,9 @@ protected:
 	void DrawMainScene();
     void DrawSubScene();
 
-	void DrawScreen();
+	void DisplayScreen();
 	
+	void postProcessTransition();
 
 	void DrawHeightmap();
 	void DrawWater();
@@ -74,12 +80,12 @@ protected:
 	Shader * reflectShader;
 	Shader * skyboxShader;
 	Shader* textureShader;
-
+	Shader* transitionShader;
 
 	HeightMap * heightMap;
 	Mesh * quad;
 
-	OBJMesh* sun;
+	OBJMesh* planet;
 
 	MD5FileData* hellData;
 	MD5Node* hellNode;
@@ -87,6 +93,7 @@ protected:
 	Camera * camera;
 
 	GLuint skybox;
+	GLuint spacebox;
 
 	float fps = 0;
 	float recentFps[100];
@@ -98,6 +105,7 @@ protected:
 	void DrawMesh();
 	void DrawFloor();
 	void DrawSun();
+	void DrawSpaceBox();
 	void DrawShadowScene();
 	void DrawCombinedScene();
 

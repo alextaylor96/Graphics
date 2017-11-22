@@ -12,11 +12,11 @@ Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
 	quad = Mesh::GenerateQuad();
 	screen = Mesh::GenerateQuad();
 
-	sun = new OBJMesh();
-	if (!sun->LoadOBJMesh(MESHDIR"cube.obj")) {
+	planet = new OBJMesh();
+	if (!planet->LoadOBJMesh(MESHDIR"cube.obj")) {
 		return;
 	}
-	sun->SetTexture(SOIL_load_OGL_texture(TEXTUREDIR"sand.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS));
+	planet->SetTexture(SOIL_load_OGL_texture(TEXTUREDIR"sand.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS));
 
 	mainscene = Mesh::GenerateQuad();
 	subscene = Mesh::GenerateQuad();
@@ -328,7 +328,7 @@ void Renderer::RenderScene() {
 	DrawMainScene();
 	DrawSubScene();
 	//displays the screen buffer
-	DrawScreen();
+	DisplayScreen();
 
 	DrawFPS("FPS: ", Vector3(0.0f, 0.0f, 0.0f), 16.0f);
 
@@ -412,7 +412,7 @@ void Renderer::DrawSubScene()
 	glEnable(GL_DEPTH_TEST);
 }
 
-void Renderer::DrawScreen()
+void Renderer::DisplayScreen()
 {
 	glDisable(GL_DEPTH_TEST);
 
@@ -710,9 +710,9 @@ void Renderer::DrawSun()
 	UpdateShaderMatrices();
 
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, sun->GetTexture());
+	glBindTexture(GL_TEXTURE_2D, planet->GetTexture());
 
-	sun->Draw();
+	planet->Draw();
 
 	glUseProgram(0);
 }

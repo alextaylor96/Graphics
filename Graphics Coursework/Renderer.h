@@ -57,7 +57,7 @@ protected:
 	void DrawMainScene();
 	void DrawSubScene();
 
-	void DrawScreen();
+	void DisplayScreen();
 
 
 	void DrawHeightmap();
@@ -79,7 +79,7 @@ protected:
 	HeightMap * heightMap;
 	Mesh * quad;
 
-	OBJMesh* sun;
+	OBJMesh* planet;
 
 	MD5FileData* hellData;
 	MD5Node* hellNode;
