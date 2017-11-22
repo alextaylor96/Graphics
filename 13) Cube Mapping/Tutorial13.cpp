@@ -17,7 +17,6 @@ int main() {
 	w.LockMouseToWindow(false);
 	w.ShowOSPointer(true);
 
-
 	while (w.UpdateWindow() && !Window::GetKeyboard()->KeyDown(KEYBOARD_ESCAPE)) {
 		if (Window::GetKeyboard()->KeyDown(KEYBOARD_1)) {
 			renderer.changeScene(1);
@@ -34,6 +33,7 @@ int main() {
 		if (Window::GetKeyboard()->KeyDown(KEYBOARD_SPACE)) {
 			renderer.setPaused(true);
 		}
+	
 		renderer.UpdateScene(w.GetTimer()->GetTimedMS());
 		renderer.RenderScene();
 	}

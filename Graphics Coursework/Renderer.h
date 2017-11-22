@@ -30,6 +30,8 @@ protected:
 	float offset = 0;
 	float fade = 1.0f;
 
+	float sceneTime = 0.0f;
+
 	int currentMainScene = 1;
 	int currentsubScene = 2;
 	int changingTo;
@@ -97,6 +99,7 @@ protected:
 
 	GLuint skybox;
 	GLuint spacebox;
+	GLuint shadebox;
 
 	float fps = 0;
 	float recentFps[100];
@@ -109,6 +112,7 @@ protected:
 	void DrawFloor();
 	void DrawPlanet();
 	void DrawSpaceBox();
+	void DrawShadeBox();
 	void DrawShadowScene();
 	void DrawCombinedScene();
 

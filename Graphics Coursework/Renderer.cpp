@@ -78,6 +78,10 @@ Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
 	spacebox = SOIL_load_OGL_cubemap(TEXTUREDIR"purplenebula_lf.tga", TEXTUREDIR"purplenebula_rt.tga", TEXTUREDIR"purplenebula_up.tga",
 		TEXTUREDIR"purplenebula_dn.tga", TEXTUREDIR"purplenebula_bk.tga", TEXTUREDIR"purplenebula_ft.tga",
 		SOIL_LOAD_RGB, SOIL_CREATE_NEW_ID, 0);
+	//looks terrible try find a better one
+	shadebox = SOIL_load_OGL_cubemap(TEXTUREDIR"pr_lf.tga", TEXTUREDIR"pr_rt.tga", TEXTUREDIR"pr_up.tga",
+		TEXTUREDIR"pr_dn.tga", TEXTUREDIR"pr_bk.tga", TEXTUREDIR"pr_ft.tga",
+		SOIL_LOAD_RGB, SOIL_CREATE_NEW_ID, 0);
 
 	basicFont = new Font(SOIL_load_OGL_texture(TEXTUREDIR"tahoma.tga", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_COMPRESS_TO_DXT), 16, 16);
 
@@ -85,6 +89,9 @@ Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
 		return;
 	}
 	if (!spacebox) {
+		return;
+	}
+	if (!shadebox) {
 		return;
 	}
 	if (!quad->GetTexture()) {
@@ -372,6 +379,19 @@ void Renderer::UpdateScene(float msec) {
 		}
 	}
 
+	if (!paused) {
+		sceneTime += msec;
+	}
+
+	if (sceneTime > 10000.0f) {
+		sceneTime = 0;
+		if (currentMainScene == 3) {
+			changeScene(1);
+		}
+		else {
+			changeScene(currentMainScene + 1);
+		}
+	}
 }
 
 void Renderer::changeScene(int changeTo)
@@ -603,10 +623,15 @@ void Renderer::DrawScene2() {
 	}
 
 	light = new Light(Vector3(-450.f, 200.0f, 280.f), Vector4(1, 1, 1, 1), 5500.0f);
+
 	DrawShadowScene();
 
 	glBindFramebuffer(GL_FRAMEBUFFER, scene2FBO);
+
+
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+
+	DrawShadeBox();
 	DrawCombinedScene();
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -656,6 +681,21 @@ void Renderer::DrawSpaceBox()
 
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_CUBE_MAP, spacebox);
+
+	quad->Draw();
+	glUseProgram(0);
+	glDepthMask(GL_TRUE);
+}
+
+void Renderer::DrawShadeBox()
+{
+	glDepthMask(GL_FALSE);
+	SetCurrentShader(skyboxShader);
+	viewMatrix = camera->BuildViewMatrix();
+	UpdateShaderMatrices();
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, shadebox);
 
 	quad->Draw();
 	glUseProgram(0);
