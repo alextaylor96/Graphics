@@ -25,11 +25,14 @@ public:
 
 protected:
 	bool paused = false;
-	bool transitioning = true;
-	int offset = 0;
+	bool transitioningOut = false;
+	bool transitioningIn = false;
+	float offset = 0;
+	float fade = 1.0f;
 
 	int currentMainScene = 1;
 	int currentsubScene = 2;
+	int changingTo;
 	
 	GLuint screenFBO;
 	GLuint screenDepth;

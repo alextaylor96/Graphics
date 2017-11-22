@@ -341,24 +341,52 @@ void Renderer::UpdateScene(float msec) {
 	fps = (1000/msec);
 	framesLookup = (framesLookup + 1) % 100;
 	recentFps[framesLookup] = fps;
-
-	offset = msec / 1000.0 * 2 * 3.14159 * .75;
+	if (transitioningOut) {
+		fade -= 0.01;
+		offset += (msec / 1000.0f * 2.0f * 3.14159f * 0.75f);
+		if (fade <= 0.0f) {
+			transitioningOut = false;
+			transitioningIn = true;
+			switch (changingTo) {
+			case 1:
+				currentMainScene = 1;
+				currentsubScene = 2;
+				break;
+			case 2:
+				currentMainScene = 2;
+				currentsubScene = 3;
+				break;
+			case 3:
+				currentMainScene = 3;
+				currentsubScene = 1;
+				break;
+			}
+		}
+	}
+	if (transitioningIn) {
+		fade += 0.01;
+		offset += (msec / 1000.0f * 2.0f * 3.14159f * 0.75f);
+		if (fade >= 1.0f) {
+			transitioningIn = false;
+			fade = 1.0f;
+		}
+	}
+	
 }
 
 void Renderer::changeScene(int changeTo)
 {
 	if (changeTo == 1) {
-		currentMainScene = 1;
-		currentsubScene = 2;
-
+		transitioningOut = true;
+		changingTo = 1;
 	}
 	if (changeTo == 2) {
-		currentMainScene = 2;
-		currentsubScene = 3;
+		transitioningOut = true;
+		changingTo = 2;
 	}
 	if (changeTo == 3) {
-		currentMainScene = 3;
-		currentsubScene = 1;
+		transitioningOut = true;
+		changingTo = 3;
 	}
 }
 
@@ -383,7 +411,7 @@ void Renderer::RenderScene() {
 	DrawMainScene();
 	DrawSubScene();
 	//if in a transition add a post process blur effect
-	if (transitioning) {
+	if (transitioningOut || transitioningIn) {
 		postProcessTransition();
 	}
 	//displays the screen buffer
@@ -499,7 +527,7 @@ void Renderer::DisplayScreen()
 	glEnable(GL_DEPTH_TEST);
 }
 
-//problem with shader and with the 3rd scene being made after 1st
+
 void Renderer::postProcessTransition()
 {
 	glDisable(GL_DEPTH_TEST);
@@ -516,8 +544,6 @@ void Renderer::postProcessTransition()
 	textureMatrix.ToIdentity();
 	UpdateShaderMatrices();
 
-	//screen->SetTexture(screenColour);
-
 	glActiveTexture(GL_TEXTURE13);
 	glBindTexture(GL_TEXTURE_2D, screenColour);
 
@@ -525,6 +551,9 @@ void Renderer::postProcessTransition()
 
 	glUniform1f(glGetUniformLocation(currentShader->GetProgram(), "offset"), offset);
 
+	glUniform2f(glGetUniformLocation(currentShader->GetProgram(), "pixelSize"), 1.0f/width, 1.0f/height);
+
+	glUniform1f(glGetUniformLocation(currentShader->GetProgram(), "fade"),  fade);
 
 	//draw screen with post processing effect shader
 	screen->Draw();
@@ -532,7 +561,6 @@ void Renderer::postProcessTransition()
 	glUseProgram(0);
 
 	//set the screen color to be the result of the post process
-	//screenColour = postColour;
 	std::swap(screenColour, postColour);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -820,7 +848,7 @@ void Renderer::DrawPlanet()
 	SetCurrentShader(sunShader);
 
 	modelMatrix.ToIdentity();
-	modelMatrix = Matrix4::Scale(Vector3(100,100,100));
+	modelMatrix = Matrix4::Translation(Vector3(0,100,0)) * Matrix4::Scale(Vector3(100,100,100));
 	textureMatrix.ToIdentity();
 
 	glUniform1i(glGetUniformLocation(currentShader->GetProgram(), "diffuseTex"), 0);

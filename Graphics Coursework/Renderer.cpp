@@ -16,7 +16,7 @@ Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
 	if (!planet->LoadOBJMesh(MESHDIR"cube.obj")) {
 		return;
 	}
-	planet->SetTexture(SOIL_load_OGL_texture(TEXTUREDIR"sand.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS));
+	planet->SetTexture(SOIL_load_OGL_texture(TEXTUREDIR"lava.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS)); //http://spiralgraphics.biz/packs/terrain_volcanic_gaseous/previews/Lava%20Cracks.jpg
 
 	mainscene = Mesh::GenerateQuad();
 	subscene = Mesh::GenerateQuad();
@@ -35,12 +35,13 @@ Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
 	sceneShader = new Shader(SHADERDIR"shadowscenevert.glsl", SHADERDIR"shadowscenefrag.glsl");
 	shadowShader = new Shader(SHADERDIR"shadowVert.glsl", SHADERDIR"shadowFrag.glsl");
 	sunShader = new Shader(SHADERDIR"sunVertex.glsl", SHADERDIR"sunFragment.glsl");
+	transitionShader = new Shader(SHADERDIR"transitionVertex.glsl", SHADERDIR"transitionFragment.glsl");
 
 	if (!sceneShader->LinkProgram() || !shadowShader->LinkProgram()) {
 		return;
 	}
 
-	if (!sunShader->LinkProgram() || !sunShader->LinkProgram()) {
+	if (!sunShader->LinkProgram() || !transitionShader->LinkProgram()) {
 		return;
 	}
 
@@ -73,9 +74,17 @@ Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
 		TEXTUREDIR"rusted_down.jpg", TEXTUREDIR"rusted_south.jpg", TEXTUREDIR"rusted_north.jpg",
 		SOIL_LOAD_RGB, SOIL_CREATE_NEW_ID, 0);
 
+	//http://www.custommapmakers.org/skyboxes.php
+	spacebox = SOIL_load_OGL_cubemap(TEXTUREDIR"purplenebula_lf.tga", TEXTUREDIR"purplenebula_rt.tga", TEXTUREDIR"purplenebula_up.tga",
+		TEXTUREDIR"purplenebula_dn.tga", TEXTUREDIR"purplenebula_bk.tga", TEXTUREDIR"purplenebula_ft.tga",
+		SOIL_LOAD_RGB, SOIL_CREATE_NEW_ID, 0);
+
 	basicFont = new Font(SOIL_load_OGL_texture(TEXTUREDIR"tahoma.tga", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_COMPRESS_TO_DXT), 16, 16);
 
 	if (!skybox) {
+		return;
+	}
+	if (!spacebox) {
 		return;
 	}
 	if (!quad->GetTexture()) {
@@ -128,6 +137,40 @@ Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
 		return;
 	}
 
+	//create fbo to render image for post processing into
+	glGenTextures(1, &postDepth);
+	glBindTexture(GL_TEXTURE_2D, postDepth);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8, width, height,
+		0, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, NULL);
+
+	glGenTextures(1, &postColour);
+	glBindTexture(GL_TEXTURE_2D, postColour);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0,
+		GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+
+
+	glGenFramebuffers(1, &postFBO);
+
+
+	glBindFramebuffer(GL_FRAMEBUFFER, postFBO);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
+		GL_TEXTURE_2D, postDepth, 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT,
+		GL_TEXTURE_2D, postDepth, 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+		GL_TEXTURE_2D, postColour, 0);
+
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE || !postDepth || !postColour) {
+		return;
+	}
 	//create fbo to render scene 1 into
 	glGenTextures(1, &scene1Depth);
 	glBindTexture(GL_TEXTURE_2D, scene1Depth);
@@ -264,6 +307,10 @@ Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
 	glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 
 
+	for (int i = 0; i < 100; ++i) {
+		recentFps[i] = 60;
+	}
+
 	init = true;
 }
 
@@ -294,26 +341,62 @@ void Renderer::UpdateScene(float msec) {
 	fps = (1000 / msec);
 	framesLookup = (framesLookup + 1) % 100;
 	recentFps[framesLookup] = fps;
+	if (transitioningOut) {
+		fade -= 0.01;
+		offset += (msec / 1000.0f * 2.0f * 3.14159f * 0.75f);
+		if (fade <= 0.0f) {
+			transitioningOut = false;
+			transitioningIn = true;
+			switch (changingTo) {
+			case 1:
+				currentMainScene = 1;
+				currentsubScene = 2;
+				break;
+			case 2:
+				currentMainScene = 2;
+				currentsubScene = 3;
+				break;
+			case 3:
+				currentMainScene = 3;
+				currentsubScene = 1;
+				break;
+			}
+		}
+	}
+	if (transitioningIn) {
+		fade += 0.01;
+		offset += (msec / 1000.0f * 2.0f * 3.14159f * 0.75f);
+		if (fade >= 1.0f) {
+			transitioningIn = false;
+			fade = 1.0f;
+		}
+	}
+
 }
 
 void Renderer::changeScene(int changeTo)
 {
 	if (changeTo == 1) {
-		currentMainScene = 1;
-		currentsubScene = 2;
-
+		transitioningOut = true;
+		changingTo = 1;
 	}
 	if (changeTo == 2) {
-		currentMainScene = 2;
-		currentsubScene = 3;
+		transitioningOut = true;
+		changingTo = 2;
 	}
 	if (changeTo == 3) {
-		currentMainScene = 3;
-		currentsubScene = 1;
+		transitioningOut = true;
+		changingTo = 3;
 	}
 }
 
 void Renderer::RenderScene() {
+
+	glBindFramebuffer(GL_FRAMEBUFFER, screenFBO);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+		GL_TEXTURE_2D, screenColour, 0);
+
+
 	if (currentMainScene == 1 || currentsubScene == 1) {
 		DrawScene1();
 	}
@@ -327,6 +410,10 @@ void Renderer::RenderScene() {
 	//draws the main and sub scenes to correct place on screen buffer
 	DrawMainScene();
 	DrawSubScene();
+	//if in a transition add a post process blur effect
+	if (transitioningOut || transitioningIn) {
+		postProcessTransition();
+	}
 	//displays the screen buffer
 	DisplayScreen();
 
@@ -345,6 +432,7 @@ void Renderer::DrawMainScene()
 	SetCurrentShader(textureShader);
 	projMatrix = Matrix4::Orthographic(-1, 1, 1, -1, -1, 1);
 
+	modelMatrix.ToIdentity();
 	viewMatrix.ToIdentity();
 	textureMatrix.ToIdentity();
 	UpdateShaderMatrices();
@@ -367,7 +455,7 @@ void Renderer::DrawMainScene()
 	mainscene->Draw();
 
 	glUseProgram(0);
-
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 	glEnable(GL_DEPTH_TEST);
 }
@@ -408,6 +496,7 @@ void Renderer::DrawSubScene()
 	projMatrix = Matrix4::Perspective(1.0f, 15000.0f, (float)width / (float)height, 45.0f);
 	glUseProgram(0);
 
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 	glEnable(GL_DEPTH_TEST);
 }
@@ -435,6 +524,46 @@ void Renderer::DisplayScreen()
 
 	glUseProgram(0);
 
+	glEnable(GL_DEPTH_TEST);
+}
+
+
+void Renderer::postProcessTransition()
+{
+	glDisable(GL_DEPTH_TEST);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, postFBO);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+		GL_TEXTURE_2D, postColour, 0);
+
+	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+	SetCurrentShader(transitionShader);
+	projMatrix = Matrix4::Orthographic(-1, 1, 1, -1, -1, 1);
+
+	viewMatrix.ToIdentity();
+	textureMatrix.ToIdentity();
+	UpdateShaderMatrices();
+
+	glActiveTexture(GL_TEXTURE13);
+	glBindTexture(GL_TEXTURE_2D, screenColour);
+
+	glUniform1i(glGetUniformLocation(currentShader->GetProgram(), "diffuseTex"), 13);
+
+	glUniform1f(glGetUniformLocation(currentShader->GetProgram(), "offset"), offset);
+
+	glUniform2f(glGetUniformLocation(currentShader->GetProgram(), "pixelSize"), 1.0f / width, 1.0f / height);
+
+	glUniform1f(glGetUniformLocation(currentShader->GetProgram(), "fade"), fade);
+
+	//draw screen with post processing effect shader
+	screen->Draw();
+
+	glUseProgram(0);
+
+	//set the screen color to be the result of the post process
+	std::swap(screenColour, postColour);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glEnable(GL_DEPTH_TEST);
 }
 
@@ -492,12 +621,14 @@ void Renderer::DrawScene3()
 		camera->SetYaw(40.0f);
 		camera->SetPosition(Vector3(350.0f, 200.0f, 450.0f));
 	}
+	viewMatrix = camera->BuildViewMatrix();
 
 	light = new Light(Vector3(-450.f, 200.0f, 280.f), Vector4(1, 1, 1, 1), 5500.0f);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, scene3FBO);
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 
+	DrawSpaceBox();
 	DrawPlanet();
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -506,11 +637,26 @@ void Renderer::DrawScene3()
 
 }
 
-
 void Renderer::DrawSkybox() {
 	glDepthMask(GL_FALSE);
 	SetCurrentShader(skyboxShader);
 	UpdateShaderMatrices();
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, skybox);
+	quad->Draw();
+	glUseProgram(0);
+	glDepthMask(GL_TRUE);
+}
+
+void Renderer::DrawSpaceBox()
+{
+	glDepthMask(GL_FALSE);
+	SetCurrentShader(skyboxShader);
+	UpdateShaderMatrices();
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, spacebox);
+
 	quad->Draw();
 	glUseProgram(0);
 	glDepthMask(GL_TRUE);
@@ -702,7 +848,7 @@ void Renderer::DrawPlanet()
 	SetCurrentShader(sunShader);
 
 	modelMatrix.ToIdentity();
-	modelMatrix = Matrix4::Translation(Vector3(2400, 280, 2000))*Matrix4::Scale(Vector3(100, 100, 100));
+	modelMatrix = Matrix4::Translation(Vector3(0, 100, 0)) * Matrix4::Scale(Vector3(100, 100, 100));
 	textureMatrix.ToIdentity();
 
 	glUniform1i(glGetUniformLocation(currentShader->GetProgram(), "diffuseTex"), 0);
@@ -716,3 +862,4 @@ void Renderer::DrawPlanet()
 
 	glUseProgram(0);
 }
+
