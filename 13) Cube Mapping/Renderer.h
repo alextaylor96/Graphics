@@ -60,16 +60,19 @@ protected:
 	GLuint scenePostDepth;
 	GLuint scenePostColour;
 
-	Mesh * screen;
+    Mesh * screen;
 	Mesh * mainscene;
 	Mesh * subscene;
 	
 	void DrawMainScene();
     void DrawSubScene();
 
+	void DrawBloom();
+
 	void DisplayScreen();
 	
 	void postProcessTransition();
+	void colorCorrection();
 
 	void DrawHeightmap();
 	void DrawWater();
@@ -118,8 +121,10 @@ protected:
 
 	Shader* sceneShader;
 	Shader* shadowShader;
+	Shader* colorCorrectShader;
 
 	Shader* sunShader;
+	Shader* bloomShader;
 
 	GLuint shadowMap;
 	GLuint shadowFBO;
