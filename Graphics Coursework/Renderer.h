@@ -35,8 +35,8 @@ protected:
 
 	float sceneTime = 0.0f;
 
-	int currentMainScene = 3;
-	int currentsubScene = 1;
+	int currentMainScene = 1;
+	int currentsubScene = 2;
 	int changingTo;
 
 	GLuint screenFBO;
@@ -137,6 +137,8 @@ protected:
 	GLuint shadowFBO;
 
 	Mesh* floor;
+	int tcsLevel;
+	void updateTcsVal();
 
 	float pitchHold;
 	Vector3 posHold;

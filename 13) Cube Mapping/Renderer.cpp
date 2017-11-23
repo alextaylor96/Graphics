@@ -17,7 +17,9 @@ Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
 	}
 	planet->type = GL_PATCHES;
 	planet->SetTexture(SOIL_load_OGL_texture(TEXTUREDIR"lava.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS)); //http://spiralgraphics.biz/packs/terrain_volcanic_gaseous/previews/Lava%20Cracks.jpg
-	planet->SetBumpMap(SOIL_load_OGL_texture(TEXTUREDIR"lavaBump.png", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS));
+	planet->SetBumpMap(SOIL_load_OGL_texture(TEXTUREDIR"lavaBump.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS));
+	planet->GenerateNormals();
+	
 	mainscene = Mesh::GenerateQuad();
 	subscene = Mesh::GenerateQuad();
 	
@@ -109,6 +111,12 @@ Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
 		return;
 	}
 	if (!heightMap->GetBumpMap()) {
+		return;
+	}
+	if (!planet->GetTexture()) {
+		return;
+	}
+	if (!planet->GetBumpMap()) {
 		return;
 	}
 
@@ -361,6 +369,7 @@ void Renderer::UpdateScene(float msec) {
 		fade -= 0.01;
 		offset += (msec / 1000.0f * 2.0f * 3.14159f * 0.75f);
 		if (fade <= 0.0f) {
+			tcsLevel = 1;
 			transitioningOut = false;
 			transitioningIn = true;
 			switch (changingTo) {
@@ -395,6 +404,8 @@ void Renderer::UpdateScene(float msec) {
 	if (sceneTime > 10000.0f) {
 		NextScene();
 	}
+	updateTcsVal();
+
 }
 
 void Renderer::changeScene(int changeTo)
@@ -955,7 +966,7 @@ void Renderer::PrevScene()
 
 void Renderer::DrawMesh() {
 	modelMatrix.ToIdentity();
-	modelMatrix = modelMatrix * Matrix4::Translation(Vector3(600 - (130 * hellNode2->getAnimCycles()), 0, 0));
+	modelMatrix = modelMatrix * Matrix4::Translation(Vector3(750 - (130 * hellNode2->getAnimCycles()), 0, 0));
 	Matrix4 tempMatrix = textureMatrix * modelMatrix;
 	glUniformMatrix4fv(glGetUniformLocation(currentShader->GetProgram(), "textureMatrix"), 1, false, *&tempMatrix.values);
 	glUniformMatrix4fv(glGetUniformLocation(currentShader->GetProgram(), "modelMatrix"), 1, false, *&modelMatrix.values);
@@ -977,27 +988,53 @@ void Renderer::DrawFloor() {
 	floor->Draw();
 }
 
+int rotation=1;
+int tcsLevel = 1;
+
 void Renderer::DrawPlanet()
 {
 	SetCurrentShader(planetShader);
 
 	modelMatrix.ToIdentity();
-	modelMatrix = Matrix4::Translation(Vector3(0,100,0)) * Matrix4::Scale(Vector3(100,100,100));
+	modelMatrix = Matrix4::Translation(Vector3(0,100,0)) * Matrix4::Scale(Vector3(100,100,100)) * Matrix4::Rotation(rotation,Vector3(0,100,0));
 	textureMatrix.ToIdentity();
-
+	rotation++;
 	glUniform1i(glGetUniformLocation(currentShader->GetProgram(), "diffuseTex"), 0);
+	glUniform1i(glGetUniformLocation(currentShader->GetProgram(), "bumpTex"), 1);
+	glUniform1f(glGetUniformLocation(currentShader->GetProgram(), "tcsLevel"), tcsLevel);
 
 	UpdateShaderMatrices();
 
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, planet->GetTexture());
-
+	
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, planet->GetBumpMap());
+	
 	if (Window::GetKeyboard()->KeyDown(KEYBOARD_N))
 	{
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	}
+
 	planet->Draw();
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	glUseProgram(0);
 }
 
+
+void Renderer::updateTcsVal()
+{
+	
+	if (sceneTime > 6000.0f) {
+		tcsLevel = 2;
+	}
+	if (sceneTime > 7000.0f) {
+		tcsLevel = 5;
+	}
+	if (sceneTime > 8000.0f) {
+		tcsLevel = 10;
+	}
+	if (sceneTime > 9000.0f) {
+		tcsLevel = 25;
+	}
+}
