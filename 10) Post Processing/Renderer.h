@@ -112,7 +112,7 @@ protected:
 	Shader* sceneShader;
 	Shader* shadowShader;
 
-	Shader* sunShader;
+	Shader* planetShader;
 
 	GLuint shadowMap;
 	GLuint shadowFBO;

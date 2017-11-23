@@ -33,7 +33,7 @@ Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
 	textureShader = new Shader(SHADERDIR"TexturedVertex.glsl", SHADERDIR"TexturedFragment.glsl");
 	sceneShader = new Shader(SHADERDIR"shadowscenevert.glsl", SHADERDIR"shadowscenefrag.glsl");
 	shadowShader = new Shader(SHADERDIR"shadowVert.glsl", SHADERDIR"shadowFrag.glsl");
-	sunShader = new Shader(SHADERDIR"sunVertex.glsl", SHADERDIR"sunFragment.glsl");
+	planetShader = new Shader(SHADERDIR"sunVertex.glsl", SHADERDIR"sunFragment.glsl");
 	transitionShader = new Shader(SHADERDIR"transitionVertex.glsl", SHADERDIR"transitionFragment.glsl");
 	colorCorrectShader = new Shader(SHADERDIR"ccVertex.glsl", SHADERDIR"ccFragment.glsl");
 	
@@ -41,7 +41,7 @@ Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
 		return;
 	}
 
-	if (!sunShader->LinkProgram() || !transitionShader->LinkProgram()) {
+	if (!planetShader->LinkProgram() || !transitionShader->LinkProgram()) {
 		return;
 	}
 
@@ -67,10 +67,7 @@ Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
 	if (!colorCorrectShader->LinkProgram()) {
 		return;
 	}
-	if (!bloomShader->LinkProgram()) {
-		return;
-	}
-
+	
 	quad->SetTexture(SOIL_load_OGL_texture(TEXTUREDIR"water.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS));
 	heightMap->SetTexture(SOIL_load_OGL_texture(TEXTUREDIR"sand.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS));
 	heightMap->SetBumpMap(SOIL_load_OGL_texture(TEXTUREDIR"sandbump.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS));
@@ -390,7 +387,6 @@ void Renderer::UpdateScene(float msec) {
 	}
 
 	if (sceneTime > 10000.0f) {
-		sceneTime = 0;
 		if (currentMainScene == 3) {
 			changeScene(1);
 		}
@@ -402,6 +398,7 @@ void Renderer::UpdateScene(float msec) {
 
 void Renderer::changeScene(int changeTo)
 {
+	sceneTime = 0;
 	if (changeTo == 1) {
 		transitioningOut = true;
 		changingTo = 1;
@@ -929,7 +926,7 @@ void Renderer::DrawFloor() {
 
 void Renderer::DrawPlanet()
 {
-	SetCurrentShader(sunShader);
+	SetCurrentShader(planetShader);
 
 	modelMatrix.ToIdentity();
 	modelMatrix = Matrix4::Translation(Vector3(0,100,0)) * Matrix4::Scale(Vector3(100,100,100));

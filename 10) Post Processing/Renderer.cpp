@@ -34,14 +34,14 @@ Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
 	textureShader = new Shader(SHADERDIR"TexturedVertex.glsl", SHADERDIR"TexturedFragment.glsl");
 	sceneShader = new Shader(SHADERDIR"shadowscenevert.glsl", SHADERDIR"shadowscenefrag.glsl");
 	shadowShader = new Shader(SHADERDIR"shadowVert.glsl", SHADERDIR"shadowFrag.glsl");
-	sunShader = new Shader(SHADERDIR"sunVertex.glsl", SHADERDIR"sunFragment.glsl");
+	planetShader = new Shader(SHADERDIR"sunVertex.glsl", SHADERDIR"sunFragment.glsl");
 	transitionShader = new Shader(SHADERDIR"transitionVertex.glsl", SHADERDIR"transitionFragment.glsl");
 
 	if (!sceneShader->LinkProgram() || !shadowShader->LinkProgram()) {
 		return;
 	}
 
-	if (!sunShader->LinkProgram() || !transitionShader->LinkProgram()) {
+	if (!planetShader->LinkProgram() || !transitionShader->LinkProgram()) {
 		return;
 	}
 
@@ -817,7 +817,7 @@ void Renderer::DrawFloor() {
 
 void Renderer::DrawPlanet()
 {
-	SetCurrentShader(sunShader);
+	SetCurrentShader(planetShader);
 
 	modelMatrix.ToIdentity();
 	modelMatrix = Matrix4::Scale(Vector3(100, 100, 100));

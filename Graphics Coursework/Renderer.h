@@ -67,9 +67,12 @@ protected:
 	void DrawMainScene();
 	void DrawSubScene();
 
+	void DrawBloom();
+
 	void DisplayScreen();
 
 	void postProcessTransition();
+	void colorCorrection();
 
 	void DrawHeightmap();
 	void DrawWater();
@@ -86,6 +89,8 @@ protected:
 	Shader * skyboxShader;
 	Shader* textureShader;
 	Shader* transitionShader;
+
+
 
 	HeightMap * heightMap;
 	Mesh * quad;
@@ -118,8 +123,10 @@ protected:
 
 	Shader* sceneShader;
 	Shader* shadowShader;
+	Shader* colorCorrectShader;
 
-	Shader* sunShader;
+	Shader* planetShader;
+	Shader* bloomShader;
 
 	GLuint shadowMap;
 	GLuint shadowFBO;

@@ -90,6 +90,8 @@ protected:
 	Shader* textureShader;
 	Shader* transitionShader;
 
+
+
 	HeightMap * heightMap;
 	Mesh * quad;
 
@@ -123,7 +125,7 @@ protected:
 	Shader* shadowShader;
 	Shader* colorCorrectShader;
 
-	Shader* sunShader;
+	Shader* planetShader;
 	Shader* bloomShader;
 
 	GLuint shadowMap;

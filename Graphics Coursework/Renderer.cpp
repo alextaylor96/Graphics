@@ -1,10 +1,9 @@
 #include "Renderer.h"
 
-//Fbo to show 3 scenes at once
-//shader to use fbos as blending/bluring transition while maybe waving at same time
+
 //make md5 mesh walk in scene 2
 //add color correct to a scene?
-//bloom on sphere for sun and destroy with lazer in shader
+//bloom on sphere for planet and destroy with lazer in shader
 
 Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
 	camera = new Camera();
@@ -34,14 +33,15 @@ Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
 	textureShader = new Shader(SHADERDIR"TexturedVertex.glsl", SHADERDIR"TexturedFragment.glsl");
 	sceneShader = new Shader(SHADERDIR"shadowscenevert.glsl", SHADERDIR"shadowscenefrag.glsl");
 	shadowShader = new Shader(SHADERDIR"shadowVert.glsl", SHADERDIR"shadowFrag.glsl");
-	sunShader = new Shader(SHADERDIR"sunVertex.glsl", SHADERDIR"sunFragment.glsl");
+	planetShader = new Shader(SHADERDIR"sunVertex.glsl", SHADERDIR"sunFragment.glsl");
 	transitionShader = new Shader(SHADERDIR"transitionVertex.glsl", SHADERDIR"transitionFragment.glsl");
+	colorCorrectShader = new Shader(SHADERDIR"ccVertex.glsl", SHADERDIR"ccFragment.glsl");
 
 	if (!sceneShader->LinkProgram() || !shadowShader->LinkProgram()) {
 		return;
 	}
 
-	if (!sunShader->LinkProgram() || !transitionShader->LinkProgram()) {
+	if (!planetShader->LinkProgram() || !transitionShader->LinkProgram()) {
 		return;
 	}
 
@@ -62,6 +62,9 @@ Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
 		return;
 	}
 	if (!textureShader->LinkProgram()) {
+		return;
+	}
+	if (!colorCorrectShader->LinkProgram()) {
 		return;
 	}
 
@@ -384,7 +387,6 @@ void Renderer::UpdateScene(float msec) {
 	}
 
 	if (sceneTime > 10000.0f) {
-		sceneTime = 0;
 		if (currentMainScene == 3) {
 			changeScene(1);
 		}
@@ -396,6 +398,7 @@ void Renderer::UpdateScene(float msec) {
 
 void Renderer::changeScene(int changeTo)
 {
+	sceneTime = 0;
 	if (changeTo == 1) {
 		transitioningOut = true;
 		changingTo = 1;
@@ -430,10 +433,15 @@ void Renderer::RenderScene() {
 	//draws the main and sub scenes to correct place on screen buffer
 	DrawMainScene();
 	DrawSubScene();
+
 	//if in a transition add a post process blur effect
 	if (transitioningOut || transitioningIn) {
 		postProcessTransition();
 	}
+	//if scene 2 add color correction problem here get help
+	/*if (currentMainScene == 2) {
+	colorCorrection();
+	}*/
 	//displays the screen buffer
 	DisplayScreen();
 
@@ -442,6 +450,7 @@ void Renderer::RenderScene() {
 
 	SwapBuffers();
 }
+
 
 void Renderer::DrawMainScene()
 {
@@ -521,6 +530,7 @@ void Renderer::DrawSubScene()
 	glEnable(GL_DEPTH_TEST);
 }
 
+
 void Renderer::DisplayScreen()
 {
 	glDisable(GL_DEPTH_TEST);
@@ -574,6 +584,37 @@ void Renderer::postProcessTransition()
 	glUniform2f(glGetUniformLocation(currentShader->GetProgram(), "pixelSize"), 1.0f / width, 1.0f / height);
 
 	glUniform1f(glGetUniformLocation(currentShader->GetProgram(), "fade"), fade);
+
+	//draw screen with post processing effect shader
+	screen->Draw();
+
+	glUseProgram(0);
+
+	//set the screen color to be the result of the post process
+	std::swap(screenColour, postColour);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glEnable(GL_DEPTH_TEST);
+}
+
+void Renderer::colorCorrection()
+{
+	glDisable(GL_DEPTH_TEST);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, postFBO);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+		GL_TEXTURE_2D, postColour, 0);
+
+	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+	SetCurrentShader(colorCorrectShader);
+	projMatrix = Matrix4::Orthographic(-1, 1, 1, -1, -1, 1);
+
+	viewMatrix.ToIdentity();
+	textureMatrix.ToIdentity();
+	UpdateShaderMatrices();
+
+	glActiveTexture(GL_TEXTURE13);
+	glBindTexture(GL_TEXTURE_2D, screenColour);
 
 	//draw screen with post processing effect shader
 	screen->Draw();
@@ -885,7 +926,7 @@ void Renderer::DrawFloor() {
 
 void Renderer::DrawPlanet()
 {
-	SetCurrentShader(sunShader);
+	SetCurrentShader(planetShader);
 
 	modelMatrix.ToIdentity();
 	modelMatrix = Matrix4::Translation(Vector3(0, 100, 0)) * Matrix4::Scale(Vector3(100, 100, 100));
