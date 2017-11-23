@@ -18,22 +18,16 @@ int main() {
 	w.ShowOSPointer(true);
 
 	while (w.UpdateWindow() && !Window::GetKeyboard()->KeyDown(KEYBOARD_ESCAPE)) {
-		if (Window::GetKeyboard()->KeyDown(KEYBOARD_1)) {
-			renderer.changeScene(1);
-			renderer.setPaused(false);
-		}
-		if (Window::GetKeyboard()->KeyDown(KEYBOARD_2)) {
-			renderer.changeScene(2);
-			renderer.setPaused(false);
-		}
-		if (Window::GetKeyboard()->KeyDown(KEYBOARD_3)) {
-			renderer.changeScene(3);
-			renderer.setPaused(false);
-		}
-		if (Window::GetKeyboard()->KeyDown(KEYBOARD_SPACE)) {
+		if (Window::GetKeyboard()->KeyDown(KEYBOARD_P)) {
 			renderer.setPaused(true);
 		}
-	
+		if (Window::GetKeyboard()->KeyDown(KEYBOARD_LEFT)) {
+			renderer.PrevScene();
+		}
+		if (Window::GetKeyboard()->KeyDown(KEYBOARD_RIGHT)) {
+			renderer.NextScene();
+		}
+
 		renderer.UpdateScene(w.GetTimer()->GetTimedMS());
 		renderer.RenderScene();
 	}

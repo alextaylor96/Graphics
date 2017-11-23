@@ -17,13 +17,16 @@ public:
 	virtual void RenderScene();
 	virtual void UpdateScene(float msec);
 
-	void changeScene(int changeTo);
-
 	void setPaused(bool setTo) {
 		paused = setTo;
 	}
 
+	void NextScene();
+	void PrevScene();
+
+
 protected:
+	void changeScene(int changeTo);
 	bool paused = false;
 	bool transitioningOut = false;
 	bool transitioningIn = false;
@@ -112,7 +115,7 @@ protected:
 
 	Font*	basicFont;
 	float waterRotate;
-	//ewhat
+
 	void DrawMesh();
 	void DrawFloor();
 	void DrawPlanet();
@@ -120,7 +123,7 @@ protected:
 	void DrawShadeBox();
 	void DrawShadowScene();
 	void DrawCombinedScene();
-
+	
 	Shader* sceneShader;
 	Shader* shadowShader;
 	Shader* colorCorrectShader;
@@ -132,4 +135,8 @@ protected:
 	GLuint shadowFBO;
 	
 	Mesh* floor;
+
+	float pitchHold;
+	Vector3 posHold;
+	float yawHold;
 };

@@ -33,10 +33,10 @@ Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
 	textureShader = new Shader(SHADERDIR"TexturedVertex.glsl", SHADERDIR"TexturedFragment.glsl");
 	sceneShader = new Shader(SHADERDIR"shadowscenevert.glsl", SHADERDIR"shadowscenefrag.glsl");
 	shadowShader = new Shader(SHADERDIR"shadowVert.glsl", SHADERDIR"shadowFrag.glsl");
-	planetShader = new Shader(SHADERDIR"sunVertex.glsl", SHADERDIR"sunFragment.glsl");
 	transitionShader = new Shader(SHADERDIR"transitionVertex.glsl", SHADERDIR"transitionFragment.glsl");
 	colorCorrectShader = new Shader(SHADERDIR"ccVertex.glsl", SHADERDIR"ccFragment.glsl");
 
+	planetShader = new Shader(SHADERDIR"planetVertex.glsl", SHADERDIR"planetFragment.glsl");//, "", SHADERDIR"planetTcs.glsl", SHADERDIR"planetTes.glsl");
 	if (!sceneShader->LinkProgram() || !shadowShader->LinkProgram()) {
 		return;
 	}
@@ -387,17 +387,13 @@ void Renderer::UpdateScene(float msec) {
 	}
 
 	if (sceneTime > 10000.0f) {
-		if (currentMainScene == 3) {
-			changeScene(1);
-		}
-		else {
-			changeScene(currentMainScene + 1);
-		}
+		NextScene();
 	}
 }
 
 void Renderer::changeScene(int changeTo)
 {
+	paused = false;
 	sceneTime = 0;
 	if (changeTo == 1) {
 		transitioningOut = true;
@@ -630,11 +626,15 @@ void Renderer::colorCorrection()
 
 
 void Renderer::DrawScene1() {
+	pitchHold = camera->GetPitch();
+	posHold = camera->GetPosition();
+	yawHold = camera->GetYaw();
+
 	glBindFramebuffer(GL_FRAMEBUFFER, scene1FBO);
 
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 
-	if (!paused) {
+	if (!paused || (currentMainScene != 1)) {
 		camera->SetPitch(0.0f);
 		camera->SetYaw(350.0f);
 		camera->SetPosition(Vector3(1800.0f, 280.0f, 2900.0f));
@@ -653,11 +653,19 @@ void Renderer::DrawScene1() {
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glUseProgram(0);
+
+	camera->SetPitch(pitchHold);
+	camera->SetYaw(yawHold);
+	camera->SetPosition(posHold);
 }
 
 void Renderer::DrawScene2() {
 
-	if (!paused) {
+	pitchHold = camera->GetPitch();
+	posHold = camera->GetPosition();
+	yawHold = camera->GetYaw();
+
+	if (!paused || (currentMainScene != 2)) {
 		camera->SetPitch(-8.0f);
 		camera->SetYaw(40.0f);
 		camera->SetPosition(Vector3(350.0f, 200.0f, 450.0f));
@@ -678,11 +686,21 @@ void Renderer::DrawScene2() {
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 	glUseProgram(0);
+
+	camera->SetPitch(pitchHold);
+	camera->SetYaw(yawHold);
+	camera->SetPosition(posHold);
 }
 
 void Renderer::DrawScene3()
 {
-	if (!paused) {
+
+
+	pitchHold = camera->GetPitch();
+	posHold = camera->GetPosition();
+	yawHold = camera->GetYaw();
+
+	if (!paused || (currentMainScene != 3)) {
 		camera->SetPitch(-8.0f);
 		camera->SetYaw(40.0f);
 		camera->SetPosition(Vector3(350.0f, 200.0f, 450.0f));
@@ -700,6 +718,10 @@ void Renderer::DrawScene3()
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 	glUseProgram(0);
+
+	camera->SetPitch(pitchHold);
+	camera->SetYaw(yawHold);
+	camera->SetPosition(posHold);
 
 }
 
@@ -899,6 +921,26 @@ void Renderer::DrawCombinedScene() {
 	DrawMesh();
 
 	glUseProgram(0);
+}
+
+void Renderer::NextScene()
+{
+	if (currentMainScene == 3) {
+		changeScene(1);
+	}
+	else {
+		changeScene(currentMainScene + 1);
+	}
+}
+
+void Renderer::PrevScene()
+{
+	if (currentMainScene == 1) {
+		changeScene(3);
+	}
+	else {
+		changeScene(currentMainScene - 1);
+	}
 }
 
 void Renderer::DrawMesh() {
