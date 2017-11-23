@@ -1,7 +1,7 @@
 #include "Renderer.h"
 
 
-//make md5 mesh walk in scene 2
+//make md5 mesh walk in scene 2 problem with anim not loading
 //add color correct to a scene?
 //tesselation on cube then warp over time/destroy/use normal map
 
@@ -16,14 +16,14 @@ Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
 		return;
 	}
 	planet->SetTexture(SOIL_load_OGL_texture(TEXTUREDIR"lava.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS)); //http://spiralgraphics.biz/packs/terrain_volcanic_gaseous/previews/Lava%20Cracks.jpg
-
+	planet->SetBumpMap(SOIL_load_OGL_texture(TEXTUREDIR"lavaBump.png", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS));
 	mainscene = Mesh::GenerateQuad();
 	subscene = Mesh::GenerateQuad();
 	
-	camera->SetPitch(0.0f);
+	/*camera->SetPitch(0.0f);
 	camera->SetYaw(350.0f);
 	camera->SetPosition(Vector3(1800.0f, 280.0f, 2900.0f));
-
+*/
 	light = new Light(Vector3((RAW_HEIGHT*HEIGHTMAP_X / 2.0f) - 500.0f, 1000.0F, (RAW_HEIGHT*HEIGHTMAP_Z / 2.0f)),
 		Vector4(0.9f, 0.9f, 1.0f, 1), (RAW_WIDTH*HEIGHTMAP_X / 2.0f));
 
@@ -877,7 +877,6 @@ void Renderer::DrawFPS(const std::string &text, const Vector3 &position, const f
 	glUseProgram(0);
 }
 
-
 void Renderer::DrawShadowScene() {
 	glBindFramebuffer(GL_FRAMEBUFFER, shadowFBO);
 
@@ -930,21 +929,25 @@ void Renderer::DrawCombinedScene() {
 
 void Renderer::NextScene()
 {
-	if (currentMainScene == 3) {
-		changeScene(1);
-	}
-	else {
-		changeScene(currentMainScene + 1);
+	if (!transitioningOut && !transitioningIn) {
+		if (currentMainScene == 3) {
+			changeScene(1);
+		}
+		else {
+			changeScene(currentMainScene + 1);
+		}
 	}
 }
 
 void Renderer::PrevScene()
 {
-	if (currentMainScene == 1) {
-		changeScene(3);
-	}
-	else {
-		changeScene(currentMainScene - 1);
+	if (!transitioningOut && !transitioningIn) {
+		if (currentMainScene == 1) {
+			changeScene(3);
+		}
+		else {
+			changeScene(currentMainScene - 1);
+		}
 	}
 }
 
