@@ -20,10 +20,10 @@ Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
 	mainscene = Mesh::GenerateQuad();
 	subscene = Mesh::GenerateQuad();
 	
-	/*camera->SetPitch(0.0f);
+	camera->SetPitch(0.0f);
 	camera->SetYaw(350.0f);
 	camera->SetPosition(Vector3(1800.0f, 280.0f, 2900.0f));
-*/
+
 	light = new Light(Vector3((RAW_HEIGHT*HEIGHTMAP_X / 2.0f) - 500.0f, 1000.0F, (RAW_HEIGHT*HEIGHTMAP_Z / 2.0f)),
 		Vector4(0.9f, 0.9f, 1.0f, 1), (RAW_WIDTH*HEIGHTMAP_X / 2.0f));
 
@@ -85,9 +85,9 @@ Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
 	spacebox = SOIL_load_OGL_cubemap(TEXTUREDIR"purplenebula_lf.tga", TEXTUREDIR"purplenebula_rt.tga", TEXTUREDIR"purplenebula_up.tga",
 		TEXTUREDIR"purplenebula_dn.tga", TEXTUREDIR"purplenebula_bk.tga", TEXTUREDIR"purplenebula_ft.tga",
 		SOIL_LOAD_RGB, SOIL_CREATE_NEW_ID, 0);
-	//looks terrible try find a better one
-	shadebox = SOIL_load_OGL_cubemap(TEXTUREDIR"pr_lf.tga", TEXTUREDIR"pr_rt.tga", TEXTUREDIR"pr_up.tga",
-		TEXTUREDIR"pr_dn.tga", TEXTUREDIR"pr_bk.tga", TEXTUREDIR"pr_ft.tga",
+
+	shadebox = SOIL_load_OGL_cubemap(TEXTUREDIR"pr_ft.tga", TEXTUREDIR"pr_bk.tga", TEXTUREDIR"pr_up.tga",
+		TEXTUREDIR"pr_dn.tga", TEXTUREDIR"pr_rt.tga", TEXTUREDIR"pr_lf.tga",
 		SOIL_LOAD_RGB, SOIL_CREATE_NEW_ID, 0);
 
 	basicFont = new Font(SOIL_load_OGL_texture(TEXTUREDIR"tahoma.tga", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_COMPRESS_TO_DXT), 16, 16);

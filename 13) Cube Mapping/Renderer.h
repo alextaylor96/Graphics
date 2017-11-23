@@ -35,8 +35,8 @@ protected:
 
 	float sceneTime = 0.0f;
 
-	int currentMainScene = 1;
-	int currentsubScene = 2;
+	int currentMainScene = 2;
+	int currentsubScene = 3;
 	int changingTo;
 	
 	GLuint screenFBO;
