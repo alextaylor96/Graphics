@@ -102,6 +102,10 @@ protected:
 
 	MD5FileData* hellData;
 	MD5Node* hellNode;
+
+	MD5FileData* hellData2;
+	MD5Node* hellNode2;
+
 	Light * light;
 	Camera * camera;
 

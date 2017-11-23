@@ -7,8 +7,8 @@ Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
 	hellData = new MD5FileData(MESHDIR"hellKnight.md5mesh");
 	hellNode = new MD5Node(*hellData);
 
-	hellData->AddAnim(MESHDIR"idle2.md5anim");
-	hellNode->PlayAnim(MESHDIR"idle2.md5anim");
+	hellData->AddAnim(MESHDIR"walk7.md5anim");
+	hellNode->PlayAnim(MESHDIR"walk7.md5anim");
 
 	sceneShader = new Shader(SHADERDIR"shadowscenevert.glsl", SHADERDIR"shadowscenefrag.glsl");
 
@@ -60,6 +60,9 @@ Renderer::~Renderer(void) {
 void Renderer::UpdateScene(float msec) {
 	camera->UpdateCamera(msec);
 	hellNode->Update(msec);
+
+	hellNode->SetTransform(Matrix4::Translation(Vector3(1000, 0, 0)));
+	hellNode->ApplyTransformsToHierarchy(0);
 }
 
 void Renderer::RenderScene() {
@@ -123,6 +126,7 @@ void Renderer::DrawCombinedScene() {
 
 void Renderer::DrawMesh() {
 	modelMatrix.ToIdentity();
+	modelMatrix = modelMatrix * Matrix4::Translation(Vector3(1000 - (130 * hellNode->getAnimCycles()), 0, 0));
 	Matrix4 tempMatrix = textureMatrix * modelMatrix;
 	glUniformMatrix4fv(glGetUniformLocation(currentShader->GetProgram(), "textureMatrix"), 1, false, *&tempMatrix.values);
 	glUniformMatrix4fv(glGetUniformLocation(currentShader->GetProgram(), "modelMatrix"), 1, false, *&modelMatrix.values);
@@ -130,7 +134,7 @@ void Renderer::DrawMesh() {
 }
 
 void Renderer::DrawFloor() {
-	modelMatrix = Matrix4::Rotation(90, Vector3(1, 0, 0)) * Matrix4::Scale(Vector3(450, 450, 1));
+	modelMatrix = Matrix4::Rotation(90, Vector3(1, 0, 0)) *Matrix4::Scale(Vector3(450, 450, 1));
 	Matrix4 tempMatrix = textureMatrix * modelMatrix;
 	glUniformMatrix4fv(glGetUniformLocation(currentShader->GetProgram(), "textureMatrix"), 1, false, *&tempMatrix.values);
 	glUniformMatrix4fv(glGetUniformLocation(currentShader->GetProgram(), "modelMatrix"), 1, false, *&modelMatrix.values);

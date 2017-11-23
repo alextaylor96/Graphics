@@ -3,7 +3,7 @@
 
 //make md5 mesh walk in scene 2
 //add color correct to a scene?
-//bloom on sphere for planet and destroy with lazer in shader
+//tesselation on cube then warp over time/destroy/use normal map
 
 Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
 	camera = new Camera();
@@ -48,9 +48,13 @@ Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
 
 	hellData = new MD5FileData(MESHDIR"hellKnight.md5mesh");
 	hellNode = new MD5Node(*hellData);
+	hellNode2 = new MD5Node(*hellData);
 
 	hellData->AddAnim(MESHDIR"idle2.md5anim");
+	hellData->AddAnim(MESHDIR"walk7.md5anim");
+
 	hellNode->PlayAnim(MESHDIR"idle2.md5anim");
+	hellNode2->PlayAnim(MESHDIR"walk7.md5anim");
 
 	if (!reflectShader->LinkProgram()) {
 		return;
@@ -395,6 +399,7 @@ void Renderer::changeScene(int changeTo)
 {
 	paused = false;
 	sceneTime = 0;
+	hellNode2->setAnimCycles(0);
 	if (changeTo == 1) {
 		transitioningOut = true;
 		changingTo = 1;
@@ -945,10 +950,11 @@ void Renderer::PrevScene()
 
 void Renderer::DrawMesh() {
 	modelMatrix.ToIdentity();
+	modelMatrix = modelMatrix * Matrix4::Translation(Vector3(500 - (130 * hellNode2->getAnimCycles()), 0, 0));
 	Matrix4 tempMatrix = textureMatrix * modelMatrix;
 	glUniformMatrix4fv(glGetUniformLocation(currentShader->GetProgram(), "textureMatrix"), 1, false, *&tempMatrix.values);
 	glUniformMatrix4fv(glGetUniformLocation(currentShader->GetProgram(), "modelMatrix"), 1, false, *&modelMatrix.values);
-	hellNode->Draw(*this);
+	hellNode2->Draw(*this);
 }
 
 void Renderer::DrawFloor() {
