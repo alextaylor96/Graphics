@@ -15,6 +15,7 @@ Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
 	if (!planet->LoadOBJMesh(MESHDIR"cube.obj")) {
 		return;
 	}
+	planet->type = GL_PATCHES;
 	planet->SetTexture(SOIL_load_OGL_texture(TEXTUREDIR"lava.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS)); //http://spiralgraphics.biz/packs/terrain_volcanic_gaseous/previews/Lava%20Cracks.jpg
 	planet->SetBumpMap(SOIL_load_OGL_texture(TEXTUREDIR"lavaBump.png", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS));
 	mainscene = Mesh::GenerateQuad();
@@ -36,7 +37,7 @@ Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
 	transitionShader = new Shader(SHADERDIR"transitionVertex.glsl", SHADERDIR"transitionFragment.glsl");
 	colorCorrectShader = new Shader(SHADERDIR"ccVertex.glsl", SHADERDIR"ccFragment.glsl");
 	
-	planetShader = new Shader(SHADERDIR"planetVertex.glsl", SHADERDIR"planetFragment.glsl");//, "", SHADERDIR"planetTcs.glsl", SHADERDIR"planetTes.glsl");
+	planetShader = new Shader(SHADERDIR"planetVertex.glsl", SHADERDIR"planetFragment.glsl", "", SHADERDIR"planetTcs.glsl", SHADERDIR"planetTes.glsl");
 	if (!sceneShader->LinkProgram() || !shadowShader->LinkProgram()) {
 		return;
 	}
@@ -350,6 +351,7 @@ Renderer::~Renderer(void) {
 void Renderer::UpdateScene(float msec) {
 	camera->UpdateCamera(msec);
 	hellNode->Update(msec);
+	hellNode2->Update(msec);
 	viewMatrix = camera->BuildViewMatrix();
 	waterRotate += msec / 1000.0f;
 	fps = (1000/msec);
@@ -953,7 +955,7 @@ void Renderer::PrevScene()
 
 void Renderer::DrawMesh() {
 	modelMatrix.ToIdentity();
-	modelMatrix = modelMatrix * Matrix4::Translation(Vector3(500 - (130 * hellNode2->getAnimCycles()), 0, 0));
+	modelMatrix = modelMatrix * Matrix4::Translation(Vector3(600 - (130 * hellNode2->getAnimCycles()), 0, 0));
 	Matrix4 tempMatrix = textureMatrix * modelMatrix;
 	glUniformMatrix4fv(glGetUniformLocation(currentShader->GetProgram(), "textureMatrix"), 1, false, *&tempMatrix.values);
 	glUniformMatrix4fv(glGetUniformLocation(currentShader->GetProgram(), "modelMatrix"), 1, false, *&modelMatrix.values);
@@ -990,8 +992,12 @@ void Renderer::DrawPlanet()
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, planet->GetTexture());
 
+	if (Window::GetKeyboard()->KeyDown(KEYBOARD_N))
+	{
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	}
 	planet->Draw();
-
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	glUseProgram(0);
 }
 

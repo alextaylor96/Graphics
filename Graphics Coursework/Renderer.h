@@ -35,8 +35,8 @@ protected:
 
 	float sceneTime = 0.0f;
 
-	int currentMainScene = 1;
-	int currentsubScene = 2;
+	int currentMainScene = 3;
+	int currentsubScene = 1;
 	int changingTo;
 
 	GLuint screenFBO;
@@ -102,6 +102,8 @@ protected:
 
 	MD5FileData* hellData;
 	MD5Node* hellNode;
+	MD5Node* hellNode2;
+
 	Light * light;
 	Camera * camera;
 

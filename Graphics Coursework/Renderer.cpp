@@ -1,9 +1,9 @@
 #include "Renderer.h"
 
 
-//make md5 mesh walk in scene 2
+//make md5 mesh walk in scene 2 problem with anim not loading
 //add color correct to a scene?
-//bloom on sphere for planet and destroy with lazer in shader
+//tesselation on cube then warp over time/destroy/use normal map
 
 Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
 	camera = new Camera();
@@ -15,8 +15,9 @@ Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
 	if (!planet->LoadOBJMesh(MESHDIR"cube.obj")) {
 		return;
 	}
+	planet->type = GL_PATCHES;
 	planet->SetTexture(SOIL_load_OGL_texture(TEXTUREDIR"lava.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS)); //http://spiralgraphics.biz/packs/terrain_volcanic_gaseous/previews/Lava%20Cracks.jpg
-
+	planet->SetBumpMap(SOIL_load_OGL_texture(TEXTUREDIR"lavaBump.png", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS));
 	mainscene = Mesh::GenerateQuad();
 	subscene = Mesh::GenerateQuad();
 
@@ -36,7 +37,7 @@ Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
 	transitionShader = new Shader(SHADERDIR"transitionVertex.glsl", SHADERDIR"transitionFragment.glsl");
 	colorCorrectShader = new Shader(SHADERDIR"ccVertex.glsl", SHADERDIR"ccFragment.glsl");
 
-	planetShader = new Shader(SHADERDIR"planetVertex.glsl", SHADERDIR"planetFragment.glsl");//, "", SHADERDIR"planetTcs.glsl", SHADERDIR"planetTes.glsl");
+	planetShader = new Shader(SHADERDIR"planetVertex.glsl", SHADERDIR"planetFragment.glsl", "", SHADERDIR"planetTcs.glsl", SHADERDIR"planetTes.glsl");
 	if (!sceneShader->LinkProgram() || !shadowShader->LinkProgram()) {
 		return;
 	}
@@ -48,9 +49,13 @@ Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
 
 	hellData = new MD5FileData(MESHDIR"hellKnight.md5mesh");
 	hellNode = new MD5Node(*hellData);
+	hellNode2 = new MD5Node(*hellData);
 
 	hellData->AddAnim(MESHDIR"idle2.md5anim");
+	hellData->AddAnim(MESHDIR"walk7.md5anim");
+
 	hellNode->PlayAnim(MESHDIR"idle2.md5anim");
+	hellNode2->PlayAnim(MESHDIR"walk7.md5anim");
 
 	if (!reflectShader->LinkProgram()) {
 		return;
@@ -81,6 +86,7 @@ Renderer::Renderer(Window &parent) : OGLRenderer(parent) {
 	spacebox = SOIL_load_OGL_cubemap(TEXTUREDIR"purplenebula_lf.tga", TEXTUREDIR"purplenebula_rt.tga", TEXTUREDIR"purplenebula_up.tga",
 		TEXTUREDIR"purplenebula_dn.tga", TEXTUREDIR"purplenebula_bk.tga", TEXTUREDIR"purplenebula_ft.tga",
 		SOIL_LOAD_RGB, SOIL_CREATE_NEW_ID, 0);
+
 	shadebox = SOIL_load_OGL_cubemap(TEXTUREDIR"pr_ft.tga", TEXTUREDIR"pr_bk.tga", TEXTUREDIR"pr_up.tga",
 		TEXTUREDIR"pr_dn.tga", TEXTUREDIR"pr_rt.tga", TEXTUREDIR"pr_lf.tga",
 		SOIL_LOAD_RGB, SOIL_CREATE_NEW_ID, 0);
@@ -345,6 +351,7 @@ Renderer::~Renderer(void) {
 void Renderer::UpdateScene(float msec) {
 	camera->UpdateCamera(msec);
 	hellNode->Update(msec);
+	hellNode2->Update(msec);
 	viewMatrix = camera->BuildViewMatrix();
 	waterRotate += msec / 1000.0f;
 	fps = (1000 / msec);
@@ -394,6 +401,7 @@ void Renderer::changeScene(int changeTo)
 {
 	paused = false;
 	sceneTime = 0;
+	hellNode2->setAnimCycles(0);
 	if (changeTo == 1) {
 		transitioningOut = true;
 		changingTo = 1;
@@ -871,7 +879,6 @@ void Renderer::DrawFPS(const std::string &text, const Vector3 &position, const f
 	glUseProgram(0);
 }
 
-
 void Renderer::DrawShadowScene() {
 	glBindFramebuffer(GL_FRAMEBUFFER, shadowFBO);
 
@@ -924,30 +931,35 @@ void Renderer::DrawCombinedScene() {
 
 void Renderer::NextScene()
 {
-	if (currentMainScene == 3) {
-		changeScene(1);
-	}
-	else {
-		changeScene(currentMainScene + 1);
+	if (!transitioningOut && !transitioningIn) {
+		if (currentMainScene == 3) {
+			changeScene(1);
+		}
+		else {
+			changeScene(currentMainScene + 1);
+		}
 	}
 }
 
 void Renderer::PrevScene()
 {
-	if (currentMainScene == 1) {
-		changeScene(3);
-	}
-	else {
-		changeScene(currentMainScene - 1);
+	if (!transitioningOut && !transitioningIn) {
+		if (currentMainScene == 1) {
+			changeScene(3);
+		}
+		else {
+			changeScene(currentMainScene - 1);
+		}
 	}
 }
 
 void Renderer::DrawMesh() {
 	modelMatrix.ToIdentity();
+	modelMatrix = modelMatrix * Matrix4::Translation(Vector3(600 - (130 * hellNode2->getAnimCycles()), 0, 0));
 	Matrix4 tempMatrix = textureMatrix * modelMatrix;
 	glUniformMatrix4fv(glGetUniformLocation(currentShader->GetProgram(), "textureMatrix"), 1, false, *&tempMatrix.values);
 	glUniformMatrix4fv(glGetUniformLocation(currentShader->GetProgram(), "modelMatrix"), 1, false, *&modelMatrix.values);
-	hellNode->Draw(*this);
+	hellNode2->Draw(*this);
 }
 
 void Renderer::DrawFloor() {
@@ -980,8 +992,12 @@ void Renderer::DrawPlanet()
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, planet->GetTexture());
 
+	if (Window::GetKeyboard()->KeyDown(KEYBOARD_N))
+	{
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	}
 	planet->Draw();
-
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	glUseProgram(0);
 }
 
